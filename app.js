@@ -9,7 +9,7 @@ var express = require('express'),
 	csrf = require('csurf'),
 	session = require('express-session'),
 	RedisStore = require('connect-redis')(session),
-	util = require('./middleware/utilities'),
+	mUtil = require('./middleware/utilities'),
 	flash = require('connect-flash'),
 	config = require('./config'),
 	io = require('./socket.io'),
@@ -38,17 +38,17 @@ app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 //app.use(csrf());
-//app.use(util.csrf);
-app.use(util.authenticated);
+//app.use(mUtil.csrf);
+app.use(mUtil.authenticated);
 app.use(flash());
-app.use(util.templateRoutes);
+app.use(mUtil.templateRoutes);
 //routes
 app.get('/', routes.index);
 app.get(config.routes.login, routes.login);
 app.get(config.routes.logout, routes.logOut);
 app.get(config.routes.register, routes.register);
 app.post(config.routes.register, routes.registerProcess);
-app.get(config.routes.chat, [util.requireAuthentication], routes.chat);
+app.get(config.routes.chat, [mUtil.requireAuthentication], routes.chat);
 app.get('/error', function(req, res, next){
 	next(new Error('A contrived error'));
 });

@@ -13,7 +13,7 @@ function error(message){
 }
 
 exports.logger = function logger(req, res, next){
-	debug({url: req.url, ts: Date.now()});
+	debug({method: req.method, url: req.url, ts: Date.now()});
 	next();
 };
 

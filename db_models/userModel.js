@@ -78,13 +78,22 @@ UserSchema.statics.addUser = function(info, cb) {
 	});
 }
 
-//UserSchema.statics.updatePassword = function(email, password, work){
-//passUtil.passwordCreate(password, function(err, salt, password){
-//	Users[username].salt = salt;
-//	Users[username].password = password;
-//	Users[username].work = work;
-//});
-//};
+UserSchema.statics.updatePassword = function(email, password, work, cb){
+	var schema = this;
+	passUtil.passwordCreate(password, function(err, salt, password){
+		schema.findOne({email: email}, function(err, profile){
+			if(profile){
+				profile.salt = salt;
+				profile.password = password;
+				profile.work = work;
+				profile.save(function(err){
+					if(err) return cb(err, null);
+					return cb(null, profile);
+				});
+			}
+		});
+	});
+};
 
 UserSchema.statics.findByUsername = function findByUsername(username, cb){
 	return this.findOne({username: username}, cb)

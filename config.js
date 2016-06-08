@@ -27,7 +27,7 @@ var config = {
 		clientSecret: 'Y2axUkVCFJgn8lPqXa0c860G'
 	},
 	crypto: {
-		workFactor: 100,	//5000
+		workFactor: 119,	//5000
 		keylen: 32,
 		randomSize: 64		//256
 	},

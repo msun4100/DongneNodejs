@@ -3,7 +3,7 @@ var passport = require('passport'),
 	google = require('passport-google-oauth').OAuth2Strategy,
 	local = require('passport-local').Strategy,
 	passwordUtils = require('./password'),
-	user = require('./user'),
+//	user = require('./user'),
 	config = require('../config'),
 	log = require('../middleware/log');
 var User = require('../db_models/userModel');
@@ -31,34 +31,59 @@ passport.use(new local({
 	usernameField: 'email',
 	passwordField: 'password',
 	passReqToCallback:true}, function(req, email, password, done){
-//	User.findByEmail(email, function(err, profile){
-//		console.log("findByEmail():", profile);
-//	});
-	User.find({email: email}, function(err, docs){
-		if(err || docs.length !== 1) 
-			return done(null, false, {message: 'Wrong Username or Password'});
-		passwordUtils.passwordCheck(password, docs[0].password, docs[0].salt, docs[0].work, function(err, isAuth){
-		if(isAuth)	{
-//			if (docs[0].work < config.crypto.workFactor){
-//				user.updatePassword(username, password, config.crypto.workFactor);
-//			}
-			if (req.body.pushId !== docs[0].pushId) {
-				docs[0].pushId = req.body.pushId;
-				docs[0].save().then(function fulfilled(result) {
-					console.log('pushId Changed');
-				}, function rejected(err) {
-					log.debug({message: 'PushId Change callback error', pushId: req.body.pushId});
-					console.log('pushId Change Error');
+		User.findOne({email: email}, function(err, profile){
+			if(profile)	{
+				passwordUtils.passwordCheck(password, profile.password, profile.salt, profile.work, function(err, isAuth){
+					if(isAuth) {
+						if (profile.work < config.crypto.workFactor) {
+							User.updatePassword(email, password, config.crypto.workFactor, function(err, profile){
+								console.log('password Changed on workFactor');
+							});
+						}
+						if (req.body.pushId !== profile.pushId) {
+							profile.pushId = req.body.pushId;
+							profile.save().then(function fulfilled(result) {
+								console.log('pushId Changed');
+							}, function rejected(err) {
+								log.debug({message: 'PushId Change callback error', pushId: req.body.pushId});
+								console.log('pushId Change Error');
+							});
+						}
+						done(null, profile);
+					} else {
+						log.debug({message: 'Wrong Username or Password', username: username});
+						done(null, false, {message: 'Wrong Username or Password'});
+					}
 				});
-			}
-			return done(null, docs[0]);
-		} else {
-			log.debug({message: 'Wrong Username or Password', email: email});
-			return done(null, false, {message: 'Wrong Username or Password'});
-		}
+			} else {
+				done(null, false, {message: 'Wrong Username or Password'});
+			}			
 		});
-	});
-}));
+//	User.find({email: email}, function(err, docs){
+//		if(err || docs.length !== 1) 
+//			return done(null, false, {message: 'Wrong Username or Password'});
+//		passwordUtils.passwordCheck(password, docs[0].password, docs[0].salt, docs[0].work, function(err, isAuth){
+//		if(isAuth)	{
+////			if (docs[0].work < config.crypto.workFactor){
+////				user.updatePassword(username, password, config.crypto.workFactor);
+////			}
+//			if (req.body.pushId !== docs[0].pushId) {
+//				docs[0].pushId = req.body.pushId;
+//				docs[0].save().then(function fulfilled(result) {
+//					console.log('pushId Changed');
+//				}, function rejected(err) {
+//					log.debug({message: 'PushId Change callback error', pushId: req.body.pushId});
+//					console.log('pushId Change Error');
+//				});
+//			}
+//			return done(null, docs[0]);
+//		} else {
+//			log.debug({message: 'Wrong Username or Password', email: email});
+//			return done(null, false, {message: 'Wrong Username or Password'});
+//		}
+//		});
+//	});
+}));	//passport.use()
 //passport.use(new local(function(username, password, done){
 //	user.findByUsername(username, function(err, profile){
 //		if(profile)
