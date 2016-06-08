@@ -6,6 +6,7 @@ var passport = require('passport'),
 	user = require('./user'),
 	config = require('../config'),
 	log = require('../middleware/log');
+var User = require('../db_models/userModel');
 
 passport.use(new facebook({
 	clientID: config.facebook.appID,
@@ -27,31 +28,50 @@ function(accessToken, refreshToken, profile, done) {
 
 //=========================================
 passport.use(new local(function(username, password, done){
-	user.findByUsername(username, function(err, profile){
-		if(profile)
-		{
-			passwordUtils.passwordCheck(password, profile.password, profile.salt, profile.work, function(err,isAuth){
-				if(isAuth)
-				{
-					if (profile.work < config.crypto.workFactor)
-					{
-						user.updatePassword(username, password, config.crypto.workFactor);
-					}
-					done(null, profile);
-				}
-				else
-				{
-					log.debug({message: 'Wrong Username or Password', username: username});
-					done(null, false, {message: 'Wrong Username or Password'});
-				}
-			});
-		}
-		else
-		{
+//	User.findByUsername(username, function(err, profile){
+//		console.log("findby::", porfile);
+//	});
+	User.find({username: username}, function(err, docs){
+		if(err || docs.length !== 1) done(null, false, {message: 'Wrong Username or Password'});
+		passwordUtils.passwordCheck(password, docs[0].password, docs[0].salt, docs[0].work, function(err, isAuth){
+		if(isAuth)	{
+//			if (docs[0].work < config.crypto.workFactor){
+//				user.updatePassword(username, password, config.crypto.workFactor);
+//			}
+			done(null, docs[0]);
+		} else {
+			log.debug({message: 'Wrong Username or Password', username: username});
 			done(null, false, {message: 'Wrong Username or Password'});
 		}
+		});
 	});
 }));
+//passport.use(new local(function(username, password, done){
+//	user.findByUsername(username, function(err, profile){
+//		if(profile)
+//		{
+//			passwordUtils.passwordCheck(password, profile.password, profile.salt, profile.work, function(err,isAuth){
+//				if(isAuth)
+//				{
+//					if (profile.work < config.crypto.workFactor)
+//					{
+//						user.updatePassword(username, password, config.crypto.workFactor);
+//					}
+//					done(null, profile);
+//				}
+//				else
+//				{
+//					log.debug({message: 'Wrong Username or Password', username: username});
+//					done(null, false, {message: 'Wrong Username or Password'});
+//				}
+//			});
+//		}
+//		else
+//		{
+//			done(null, false, {message: 'Wrong Username or Password'});
+//		}
+//	});
+//}));
 
 passport.serializeUser(function(user, done){
 	done(null, user);

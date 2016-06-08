@@ -29,7 +29,12 @@
     "scmp": "0.0.3",
     "amqp": "0.2.0",
     "q": "1.0.1",
-    "morgan": "^1.6.1"
+    "morgan": "^1.6.1",
+    
+    "formidable": "*",
+    "mongodb": "^2.1.4",
+    "mongoose": "^4.3.7",
+    "mongoose-auto-increment":"5.0.1"
   },
   "devDependencies": {},
   "repository": "",

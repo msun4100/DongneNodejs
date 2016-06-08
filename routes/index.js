@@ -1,6 +1,7 @@
 var util = require('../middleware/utilities'),
 	config = require('../config'),
 	user = require('../passport/user');
+var User = require('../db_models/userModel');
 
 module.exports.index = index;
 module.exports.login = login;
@@ -22,24 +23,19 @@ function register(req, res){
 };
 
 function registerProcess(req, res, next){
+//	var user = new User();
 	if (req.body.username && req.body.password)
 	{
-		user.addUser(req.body.username, req.body.password, config.crypto.workFactor, function(err, profile){
+		User.addUser(req.body.username, req.body.password, config.crypto.workFactor, function(err, profile){
 			if (err) {
-//				req.flash('error', err);
-//				res.redirect(config.routes.register);
-
 				return next(err);	//addUser 실패한 경우 === 같은 유저가 있음
 			}else{
 				req.login(profile, function(err){
-//					res.redirect(config.routes.chat);
 					res.send({success: 1, msg: 'register complete', result: profile});
 				});
 			}
 		});
 	}else{
-//		req.flash('error', 'Please fill out all the fields');
-//		res.redirect(config.routes.register);
 		res.send({success: 0, msg: 'register failure', result: null});
 	}
 };
