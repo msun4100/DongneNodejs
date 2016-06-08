@@ -6,7 +6,6 @@
             		<% if (message.length > 0) { %>
             			<div class="alert alert-danger"><%= message %></div>
             		<% } %>
-            		<input type="hidden" name="_csrf" value="<%= token %>">
                 <div class="form-group">
                     <label for="username">Username</label>
                     <input type="text" class="form-control" id="username" placeholder="username" name="username">

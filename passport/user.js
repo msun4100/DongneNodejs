@@ -51,7 +51,8 @@ var addUser = function addUser(username, password, work, cb){
 			return cb(null, Users[username]);
 		});
 	}else{
-		return cb('User exists!', null);
+//		return cb('User exists!', null);
+		return cb(new Error('User exists!'), null);
 	}
 };
 

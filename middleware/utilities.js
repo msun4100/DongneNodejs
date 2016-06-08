@@ -4,6 +4,7 @@ var config = require('../config');
 //	res.locals.token = req.csrfToken();
 //	next();
 //};
+//사용하려면 app.js에서 csrf 두개 use하고 login/register.ejs 에 히든 인풋 추가
 
 exports.authenticated = function authenticated(req, res, next){
 	req.session.isAuthenticated = req.session.passport.user !== undefined;
