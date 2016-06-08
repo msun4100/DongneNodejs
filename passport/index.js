@@ -27,21 +27,34 @@ function(accessToken, refreshToken, profile, done) {
 }));
 
 //=========================================
-passport.use(new local(function(username, password, done){
-//	User.findByUsername(username, function(err, profile){
-//		console.log("findby::", porfile);
+passport.use(new local({
+	usernameField: 'email',
+	passwordField: 'password',
+	passReqToCallback:true}, function(req, email, password, done){
+//	User.findByEmail(email, function(err, profile){
+//		console.log("findByEmail():", profile);
 //	});
-	User.find({username: username}, function(err, docs){
-		if(err || docs.length !== 1) done(null, false, {message: 'Wrong Username or Password'});
+	User.find({email: email}, function(err, docs){
+		if(err || docs.length !== 1) 
+			return done(null, false, {message: 'Wrong Username or Password'});
 		passwordUtils.passwordCheck(password, docs[0].password, docs[0].salt, docs[0].work, function(err, isAuth){
 		if(isAuth)	{
 //			if (docs[0].work < config.crypto.workFactor){
 //				user.updatePassword(username, password, config.crypto.workFactor);
 //			}
-			done(null, docs[0]);
+			if (req.body.pushId !== docs[0].pushId) {
+				docs[0].pushId = req.body.pushId;
+				docs[0].save().then(function fulfilled(result) {
+					console.log('pushId Changed');
+				}, function rejected(err) {
+					log.debug({message: 'PushId Change callback error', pushId: req.body.pushId});
+					console.log('pushId Change Error');
+				});
+			}
+			return done(null, docs[0]);
 		} else {
-			log.debug({message: 'Wrong Username or Password', username: username});
-			done(null, false, {message: 'Wrong Username or Password'});
+			log.debug({message: 'Wrong Username or Password', email: email});
+			return done(null, false, {message: 'Wrong Username or Password'});
 		}
 		});
 	});
@@ -123,7 +136,7 @@ var routes = function routes(app){
 				console.log("req.user: ", req.user);
 				return res.send({
 					success: 1,
-					msg: "user.id: "+ user.id,
+					msg: "user.email: "+ user.email,
 					result: { lastLogin: 1 }
 				});
 			});

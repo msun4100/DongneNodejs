@@ -27,9 +27,9 @@ var config = {
 		clientSecret: 'Y2axUkVCFJgn8lPqXa0c860G'
 	},
 	crypto: {
-		workFactor: 5000,
+		workFactor: 100,	//5000
 		keylen: 32,
-		randomSize: 256
+		randomSize: 64		//256
 	},
 	rabbitMQ: {
 		URL: 'amqp://guest:guest@localhost:5672',

@@ -23,10 +23,38 @@ function register(req, res){
 };
 
 function registerProcess(req, res, next){
-//	var user = new User();
-	if (req.body.username && req.body.password)
+//	userId: {type: Number, unique: true },
+//	email: {type: String, unique: true },
+//	password: String,
+//	pushId: String,
+//	username: String,
+//	univ: [{univId:Number, name:String, dept:String, enterYear:Number, isGraduate:{ type: Number, default: 0 }}],
+//	job: { name:String, team:String },
+//	desc: [ String ],
+//	sns: [ String ],
+//	pic: String,
+//	createdAt: { type: Date, default: Date.now },
+//	salt: {type: String},
+//	work: {type: Number},
+//	provider: {type: String}
+	if (req.body.email && req.body.password)
 	{
-		User.addUser(req.body.username, req.body.password, config.crypto.workFactor, function(err, profile){
+		var info = {
+//				userId:
+				email: req.body.email,
+				password: req.body.password,
+				pushId: req.body.pushId,
+				username: req.body.username,
+				univ:[],
+				job: "tempJob",
+				desc:[],
+				sns:[],
+				pic: "temPicture",
+//				salt:
+				work: config.crypto.workFactor,
+				provider: config.crypto.provider
+		};
+		User.addUser(info, function(err, profile){
 			if (err) {
 				return next(err);	//addUser 실패한 경우 === 같은 유저가 있음
 			}else{

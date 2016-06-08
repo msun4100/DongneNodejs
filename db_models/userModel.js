@@ -27,20 +27,41 @@ var UserSchema = Schema({
 //	rooms:[Number]
 });
 
-UserSchema.statics.addUser = function(username, password, work, cb) {
-	this.find({ username : username}, function(err, docs){
+//var info = {
+////		userId:
+//		email: req.body.email,
+//		password: req.body.password,
+//		pushId: req.body.pushId,
+//		username: req.body.username,
+//		univ:[],
+//		job: "tempJob",
+//		desc:[],
+//		sns:[],
+//		pic: "temPicture",
+////		salt:
+//		work: config.crypto.workFactor,
+//		provider: config.crypto.provider
+//};
+
+UserSchema.statics.addUser = function(info, cb) {
+	this.find({ email : info.email}, function(err, docs){
 		if(err) 
 			return cb(err, null);
 		if(docs.length === 0){
-			passUtil.passwordCreate(password, function(err, salt, password){
+			passUtil.passwordCreate(info.password, function(err, salt, password){
 				user = new User({
-					email: username+'@gmail.com',
-					username: username,
-					salt: salt,
-					password: password,
-					work: work,
-					provider: 'local',
-					
+					email: info.email,
+					password: password, //생성된
+					pushId: info.pushId,
+					username: info.username,
+					univ: info.univ,
+					job: info.job,
+					desc: info.desc,
+					sns: info.sns,
+					pic: info.pic,
+					salt: salt,	//생성된
+					work: info.work,
+					provider: info.provider,
 				});
 				user.save(function(err){
 					if(err) {
@@ -56,6 +77,14 @@ UserSchema.statics.addUser = function(username, password, work, cb) {
 
 	});
 }
+
+//UserSchema.statics.updatePassword = function(email, password, work){
+//passUtil.passwordCreate(password, function(err, salt, password){
+//	Users[username].salt = salt;
+//	Users[username].password = password;
+//	Users[username].work = work;
+//});
+//};
 
 UserSchema.statics.findByUsername = function findByUsername(username, cb){
 	return this.findOne({username: username}, cb)
@@ -108,31 +137,23 @@ var addUser = function addUser(username, password, work, cb){
 	});
 };
 
-//var updatePassword = function(username, password, work){
-//	passUtil.passwordCreate(password, function(err, salt, password){
-//		Users[username].salt = salt;
-//		Users[username].password = password;
-//		Users[username].work = work;
-//	});
-//};
-
 exports.findByUsername = findByUsername;
 exports.addUser = addUser;
 
 module.exports = User;
 
-User.create({
-	salt: 'G81lJERghovMoUX5+RoasvwT7evsK1QTL33jc5pjG0w=',
-    password: 'DAq+sDiEbIR0fHnbzgKQCOJ9siV5CL6FmXKAI6mX7UY=',
-    work: 5000,
-    provider: 'local',
-    username: 'josh',
-    email: 'josh@gmail.com'
-}).then(function fulfilled(result) {
-console.log('Success : ', result);
-}, function rejected(err) {
-console.error('Error : ', err);
-});
+//User.create({
+//	salt: 'G81lJERghovMoUX5+RoasvwT7evsK1QTL33jc5pjG0w=',
+//    password: 'DAq+sDiEbIR0fHnbzgKQCOJ9siV5CL6FmXKAI6mX7UY=',
+//    work: 5000,
+//    provider: 'local',
+//    username: 'josh',
+//    email: 'josh@gmail.com'
+//}).then(function fulfilled(result) {
+//console.log('Success : ', result);
+//}, function rejected(err) {
+//console.error('Error : ', err);
+//});
 
 
 //dummy values
