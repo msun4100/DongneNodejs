@@ -34,7 +34,9 @@ var config = {
 	rabbitMQ: {
 		URL: 'amqp://guest:guest@localhost:5672',
 		exchange: 'packtchat.log'
-	}
+	},
+	mongodbPort: 27017,
+	mongodbUrl: 'localhost'
 };
 
 module.exports = config;

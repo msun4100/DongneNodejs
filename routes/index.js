@@ -52,7 +52,7 @@ function registerProcess(req, res, next){
 				pic: "temPicture",
 //				salt:
 				work: config.crypto.workFactor,
-				provider: config.crypto.provider
+				provider: 'local'
 		};
 		User.addUser(info, function(err, profile){
 			if (err) {

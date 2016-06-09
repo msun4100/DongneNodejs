@@ -51,7 +51,7 @@ passport.use(new local({
 						}
 						done(null, profile);
 					} else {
-						log.debug({message: 'Wrong Username or Password', username: username});
+						log.debug({message: 'Wrong Username or Password', username: email});
 						done(null, false, {message: 'Wrong Username or Password'});
 					}
 				});
@@ -161,7 +161,7 @@ var routes = function routes(app){
 				console.log("req.user: ", req.user);
 				return res.send({
 					success: 1,
-					msg: "user.email: "+ user.email,
+					msg: "user.email: "+ user.userId,
 					result: { lastLogin: 1 }
 				});
 			});

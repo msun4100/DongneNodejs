@@ -1,4 +1,6 @@
-var passUtil = require('../passport/password');
+var passUtil = require('../passport/password'),
+	q = require('q'),
+	config = require('../config');
 var mongoose = require('mongoose'),
 	Schema = mongoose.Schema;
 var autoIncrement = require('mongoose-auto-increment');
@@ -40,7 +42,7 @@ var UserSchema = Schema({
 //		pic: "temPicture",
 ////		salt:
 //		work: config.crypto.workFactor,
-//		provider: config.crypto.provider
+//		provider: "local"
 //};
 
 UserSchema.statics.addUser = function(info, cb) {
@@ -61,7 +63,7 @@ UserSchema.statics.addUser = function(info, cb) {
 					pic: info.pic,
 					salt: salt,	//생성된
 					work: info.work,
-					provider: info.provider,
+					provider: "local",
 				});
 				user.save(function(err){
 					if(err) {
@@ -135,11 +137,6 @@ var addUser = function addUser(username, password, work, cb){
 				user.save(function(err){
 					return cb(null, user);
 				});
-//				user.save().then(function fulfilled(doc){
-//					return cb(null, doc);
-//				}, function rejected(err) {
-//					return cb(err, null);
-//				});
 			});
 		} else return cb(new Error('docs Length error'), null);
 
@@ -151,38 +148,55 @@ exports.addUser = addUser;
 
 module.exports = User;
 
-//User.create({
-//	salt: 'G81lJERghovMoUX5+RoasvwT7evsK1QTL33jc5pjG0w=',
-//    password: 'DAq+sDiEbIR0fHnbzgKQCOJ9siV5CL6FmXKAI6mX7UY=',
-//    work: 5000,
-//    provider: 'local',
-//    username: 'josh',
-//    email: 'josh@gmail.com'
-//}).then(function fulfilled(result) {
-//console.log('Success : ', result);
-//}, function rejected(err) {
-//console.error('Error : ', err);
-//});
-
-
 //dummy values
-//for (i = 0; i < 10; i++) {
-//	User.create({
-//		email: "user"+i+"@gmail.com",
-//		password: "1234",
-//		pushId: "asdfa14513123",
-//		username: "username"+i,
-//		univ: [{name:"univ"+i, dept:"dept"+i, enterYear:2010}],
-//		job: [{name:"compname"+i, team:"teamname"+i}],
-//		desc: [ "#desc" ],
-//		sns: [ "facebook link" ],
-//		pic: "picturejda1232131",
-//		friends:[],
-//		rooms:[]
-//	}).then(function fulfilled(result) {
-//		console.log('Success : ', result);
-//	}, function rejected(err) {
-//		console.error('Error : ', err);
+//setupUsers();
+function setupUsers(){
+	for(var i=0; i<1000; i++){
+		createUser(i);
+	}
+}
+function saveUser(user){
+	user.save(function(err){
+		if(err) {
+			console.log('addUser.save() error occured..');
+		}
+		console.log(user.email+' saved');
+	});
+}
+
+function createUser(i){
+	passUtil.passwordCreate("1234", function(err, salt, password){
+		user = new User({
+			email: 'user'+i+'@gmail.com',
+			password: password, //생성된
+			pushId: "temppushid" +i,
+			username: 'username'+i,
+			univ: [],
+			job: {},
+			desc: [],
+			sns: [],
+			pic: [],
+			salt: salt,	//생성된
+			work: config.crypto.workFactor,
+			provider: "local",
+		});
+		saveUser(user);
+	});	
+}
+
+//function getUsersinRoom(room){
+//	return q.Promise(function(resolve, reject, notify){
+//		client.zrange('rooms:' + room, 0, -1, function(err, data){
+//			var users = [];
+//			var loopsleft = data.length;
+//			data.forEach(function(u){
+//				client.hgetall('user:' + u, function(err, userHash){
+//					users.push(models.User(u, userHash.name, userHash.type));
+//					loopsleft--;
+//					if(loopsleft === 0) resolve(users);
+//				});
+//			});
+//		});
 //	});
-//}
+//};
 

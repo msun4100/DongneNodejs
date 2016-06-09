@@ -30,6 +30,7 @@
     "amqp": "0.2.0",
     "q": "1.0.1",
     "morgan": "^1.6.1",
+    "async": "*",
     
     "formidable": "*",
     "mongodb": "^2.1.4",
