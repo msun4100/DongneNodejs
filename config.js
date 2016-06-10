@@ -35,6 +35,7 @@ var config = {
 		URL: 'amqp://guest:guest@localhost:5672',
 		exchange: 'packtchat.log'
 	},
+	mongodbName: 'dongne',
 	mongodbPort: 27017,
 	mongodbUrl: 'localhost'
 };

@@ -1,9 +1,9 @@
 //binding mongoose module
-var mongoose = require('mongoose');
-
+var mongoose = require('mongoose'),
+	config = require('../config');
 //connection uri
-var dbURI = 'mongodb://localhost/dongne';
-
+var dbURI = 'mongodb://'+ config.mongodbUrl + '/' + config.mongodbName;
+//var dbURI = 'mongodb://'+ config.mongodbUrl + '/comments';
 //get the database connection pool
 mongoose.connect(dbURI,{server: { poolSize: 1 }});
 //mongoose.connect(dbURI);
