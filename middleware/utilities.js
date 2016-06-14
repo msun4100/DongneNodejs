@@ -1,5 +1,5 @@
 var config = require('../config');
-
+var Page = require('../db_models/pageModel');
 //exports.csrf = function csrf(req, res, next){
 //	res.locals.token = req.csrfToken();
 //	next();
@@ -33,4 +33,22 @@ exports.templateRoutes = function templateRoutes(req, res, next){
 	res.locals.routes = config.routes;
 
 	next();
+};
+
+exports.checkPage = function checkPage(req, res, next){
+	console.log('req.method: ', req.method);
+	if(req.method.toLowerCase() == 'get'){
+		return next();
+	}
+	var pageId = req.body.pageId;
+	Page.findOne({pageId: pageId}, function(err, doc){
+		if(err) return next(err);
+		if(!doc){
+			res.send({ success: 0, msg:'Page Not Exists', result: null});
+		} else {
+			res.locals.pageId = pageId;
+			req.session.pageId = pageId;
+			return next();
+		}
+	});
 };

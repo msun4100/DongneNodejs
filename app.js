@@ -54,6 +54,8 @@ app.get('/error', function(req, res, next){
 });
 passport.routes(app);	//함수는 앱으로 실행되고, 이 앱은 익스프레스 서버 오브젝트이다. 익스프레스는 앱이 실행되면 두 페이스북 라우트(인증 절차)들을 알게 된다.
 
+app.use('/board', [mUtil.checkPage], require('./routes/boardRouter'));// /board/xxx로 접속
+//app.use(require('./routes/boardRouter'));	//  /xxx로 바로 접속
 app.use(require('./routes/friendRouter'));
 app.use(require('./routes/commentRouter'));
 

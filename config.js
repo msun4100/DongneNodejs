@@ -35,9 +35,16 @@ var config = {
 		URL: 'amqp://guest:guest@localhost:5672',
 		exchange: 'packtchat.log'
 	},
-	mongodbName: 'dongne',
-	mongodbPort: 27017,
-	mongodbUrl: 'localhost'
+	mongodb: {
+		name: 'dongne',
+		port: 27017,
+		url: 'localhost'	
+	},
+	board: {
+		pageSize: 10
+	}
+	
+	
 };
 
 module.exports = config;

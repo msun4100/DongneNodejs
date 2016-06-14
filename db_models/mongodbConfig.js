@@ -2,7 +2,7 @@
 var mongoose = require('mongoose'),
 	config = require('../config');
 //connection uri
-var dbURI = 'mongodb://'+ config.mongodbUrl + '/' + config.mongodbName;
+var dbURI = 'mongodb://'+ config.mongodb.url + '/' + config.mongodb.name;
 //var dbURI = 'mongodb://'+ config.mongodbUrl + '/comments';
 //get the database connection pool
 mongoose.connect(dbURI,{server: { poolSize: 1 }});

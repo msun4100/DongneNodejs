@@ -17,13 +17,13 @@ router.post('/comments/add', addCommentRoutes);
 //이 함수가 처음엔 해당글(photo나 page 등이 코멘트쓰레드에 해당하는 commentId 를 갖고 있음
 //init.js에서 commentThread 생성해서 그 아이디를 photo나 page가 각각 갖고 있음
 //그래서 _id로 검색하는 것 
-//근데 나는 인풋으로 받은 글넘버랑 코멘트쓰레드 스키마의 postId랑 비교해서 같으면 보내려 함
+//근데 나는 인풋으로 받은 글넘버랑 코멘트쓰레드 스키마의 boardId랑 비교해서 같으면 보내려 함
 
 function getCommentRoutes(req, res, next) {
 
 //	CommentThread.findOne({
 //		_id : ObjectID.createFromHexString("57591fa5894418fc1d2d2326")
-	CommentThread.findById({ _id : "57591fa5894418fc1d2d232b" })
+	CommentThread.findById({ _id : "575a7b108da2ab341115403e" })
 	.exec(function(err, comment) {
 		if(err) return next(err);
 		if (!comment) {
@@ -56,12 +56,13 @@ function addCommentRoutes(req, res, next) {
 		//board.commentId가 null인 경우 === 첫 댓글이 작성되어 호출된 경우 === req.body.parentCommentId === board.commentId 가 null 
 		if(board.commentId === null || board.commentId === undefined){
 //			console.log("null||undefined");
-			var comment = new CommentThread({title: 'title'+req.body.subject});
+			var comment = new CommentThread({title: 'title:'+req.body.boardId});
 			comment.save(function(err, comment){
 				board.commentId = comment.id;
 		        board.save(function(err){
+		        	//newComment's info
 		        	var info = {
-			        		subject: req.body.subject,
+//			        		subject: req.body.subject,
 			        		body: req.body.body
 			        };
 //					var newComment = Reply(req.body.newComment); //newComment를 var info{subject, body} 식으러 만들어
@@ -82,7 +83,7 @@ function addCommentRoutes(req, res, next) {
 						});
 				} else {
 					var info = {
-			        		subject: req.body.subject,
+//			        		subject: req.body.subject,
 			        		body: req.body.body
 			        };
 			        var newComment = new Reply(info);
