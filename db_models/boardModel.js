@@ -5,20 +5,20 @@ var connection = require('./mongodbConfig');
 autoIncrement.initialize(connection);
 
 var BoardSchema = new Schema({
-	univId: Number,
-	writer: Number,	//User.userId
-	pageId: Number,	//0:재학생, 1:졸업생, 2:~page#
+	univId: {type: Number, ref: 'Univ'},
+	writer: {type: Number, ref: 'User'},	//User.userId
+	pageId: {type: Number, ref: 'Page'},	//0:재학생, 1:졸업생, 2:~page#
 	type: {type: Number, "default": 1},	//0:비공개, 1:공개
     title: String,
     
-    body: String,
+    body: {type: String, "default": "내용을 입력해주세요."},
     viewCount: {type: Number, "default": 0},
     likeCount: {type: Number, "default": 0},
-    likes: [{type: Number}],
+    likes: [{type: Number, ref: 'User'}],
     filename: String,
     createdAt: { type: Date, "default": Date.now },
     updatedAt: { type: Date, "default": Date.now },
-    commentId: Schema.Types.ObjectId
+    commentId: { type: Schema.Types.ObjectId, ref: 'CommentThread'}
 });
 
 BoardSchema.virtual('mDate').get(function () {
@@ -27,7 +27,7 @@ BoardSchema.virtual('mDate').get(function () {
 BoardSchema.set('toJSON' , { virtuals : true});
 
 BoardSchema.plugin(autoIncrement.plugin,
-		  { "model" : 'Board' , "field" : 'num', "startAt" : 1, "incrementBy" : 1});
+		  { "model" : 'Board' , "field" : 'boardId', "startAt" : 0, "incrementBy" : 1});
 
 var Board = mongoose.model('Board', BoardSchema);
 

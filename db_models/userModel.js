@@ -9,8 +9,11 @@ autoIncrement.initialize(connection);
 
 var UserSchema = Schema({
 	userId: {type: Number, unique: true },
-	email: {type: String, unique: true },
-	password: String,
+	email: {type: String,
+		required: true,
+		unique: true,
+		validate: /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\b/ },
+	password: {type: String, required: true},
 	pushId: String,
 	username: String,
 	univ: [{univId:Number, name:String, dept:String, enterYear:Number, isGraduate:{ type: Number, default: 0 }}],
@@ -19,6 +22,7 @@ var UserSchema = Schema({
 	sns: [ String ],
 	pic: String,
 	createdAt: { type: Date, default: Date.now },
+	updatedAt: { type: Date, default: Date.now },
 	salt: {type: String},
 	work: {type: Number},
 	provider: {type: String}

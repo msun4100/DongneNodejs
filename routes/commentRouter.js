@@ -23,7 +23,8 @@ function getCommentRoutes(req, res, next) {
 
 //	CommentThread.findOne({
 //		_id : ObjectID.createFromHexString("57591fa5894418fc1d2d2326")
-	CommentThread.findById({ _id : "575a7b108da2ab341115403e" })
+//	CommentThread.findById({ _id : "575a7b108da2ab341115403e" })
+	CommentThread.findOne({ boarId: 0})
 	.exec(function(err, comment) {
 		if(err) return next(err);
 		if (!comment) {
@@ -39,14 +40,13 @@ function getCommentRoutes(req, res, next) {
 /*
 --postman 요청시--
 boardId: board.id,
-subject: 댓글 제목,
 body: 댓글 내용
 parentCommentId: board.commentId //대댓글의 경우 해당 댓글의 ObjectId
 */
 function addCommentRoutes(req, res, next) {
 //	parentCommentId = req.body.parentCommentId;
 //	Board.findById({ _id: req.body.boardId}).exec(function(err, board){
-	Board.findById({ _id: ObjectID.createFromHexString(req.body.boardId)}).exec(function(err, board){
+	Board.findOne({ boardId: req.body.boardId}).exec(function(err, board){
 		if(err) return next(err);
 		if(!board){ 
 			return res.json(200, {
@@ -63,6 +63,7 @@ function addCommentRoutes(req, res, next) {
 		        	//newComment's info
 		        	var info = {
 //			        		subject: req.body.subject,
+		        			boarId: board.boardId,
 			        		body: req.body.body
 			        };
 //					var newComment = Reply(req.body.newComment); //newComment를 var info{subject, body} 식으러 만들어
@@ -84,6 +85,7 @@ function addCommentRoutes(req, res, next) {
 				} else {
 					var info = {
 //			        		subject: req.body.subject,
+							boardId: board.boardId,
 			        		body: req.body.body
 			        };
 			        var newComment = new Reply(info);

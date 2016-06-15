@@ -36,7 +36,6 @@ exports.templateRoutes = function templateRoutes(req, res, next){
 };
 
 exports.checkPage = function checkPage(req, res, next){
-	console.log('req.method: ', req.method);
 	if(req.method.toLowerCase() == 'get'){
 		return next();
 	}
@@ -44,7 +43,7 @@ exports.checkPage = function checkPage(req, res, next){
 	Page.findOne({pageId: pageId}, function(err, doc){
 		if(err) return next(err);
 		if(!doc){
-			res.send({ success: 0, msg:'Page Not Exists', result: null});
+			return res.send({ success: 0, msg:'Page Not Exists', result: null});
 		} else {
 			res.locals.pageId = pageId;
 			req.session.pageId = pageId;

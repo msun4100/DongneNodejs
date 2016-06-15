@@ -3,17 +3,17 @@ var mongoose = require('mongoose'),
 var ReplySchema = new Schema();
 ReplySchema.add({
 	username: String,
-	userId: Number,
+	userId: {type: Number, ref: 'User'},
 	timestamp: { type: Date, 'default': Date.now },
 	body: String,
 	replies:[ReplySchema],
 	likeCount: Number,
-	likes: [{type: Number, default: 0}]
+	likes: [{type: Number}]
 });
 var CommentThreadSchema = new Schema({
     title: String,
 //    postId: Schema.Types.ObjectId,
-    boardId: {type: Schema.Types.ObjectId, ref: 'Board'},
+    boardId: {type: Number, ref: 'Board'},
     updateAt: { type: Date, 'default': Date.now },
     replies:[ReplySchema]
 //    replies: [{ type: Schema.Types.ObjectId, ref: 'Reply' }]
