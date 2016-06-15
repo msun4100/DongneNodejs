@@ -2,230 +2,256 @@ var express = require('express'),
 	router = express.Router(),
 	async = require('async'),
 	mUtil = require('../middleware/utilities'),
-	ObjectID = require('mongodb').ObjectID;
+	ObjectID = require('mongodb').ObjectID,
+	config = require('../config');
 
 var User = require('../db_models/userModel'),
 	Friend = require('../db_models/friendModel'),
 	CommentThread = require('../db_models/commentModel').CommentThread,
 	Reply = require('../db_models/commentModel').Reply,
 	Board = require('../db_models/boardModel'),
-	Page = require('../db_models/pageModel');
+	Main = require('../db_models/pageModel');
 
 
-router.get('/page', getPageList);
-router.post('/page', addPageRoutes);
+router.post('/write', function(req, res, next) {
+	console.log('req.session.pageId: ', req.session.pageId);
+	var info = {
+			admin: [req.body.admin],
+			univId: req.body.univId,
+			type: req.body.type,
+			pagename: req.body.pagename,
+			followers: [],
+			requests: [],
+		};
+	var page = new Main(info);
+	page.save(function(err, doc) {
+		if (err) return next(err);
+		console.log("saved doc: ", doc);
+		res.send({ success:1, msg:'page saved', result: doc});
+	});		
+			
+});
 
-function getPageList(req, res, next) {
-	Page.find().exec(function(err, docs) {
-		if (err)
-			return next(err);
-		if (docs.length === 0) {
-			res.send({
-				success : 1,
-				msg : 'Page Not Found',
-				result : null
-			});
-		} else {
-			res.send({
-				success : 1,
-				msg : 'Page Found',
-				result : docs
+router.get('/list', function (req, res, next) {
+//  res.redirect('/list/1');
+	req.url = "/list/1";
+	router.handle(req, res, next);
+});
+
+router.get('/list/:pagename', function(req, res, next) {
+	
+	var pagename = req.params.pagename;
+	var regex = new RegExp(pagename, "i");
+	console.log('req.user.userId', req.user.userId);
+	console.log('req.session.passport.userId', req.session.passport.user.userId);
+	var testArr= [0,1,2,10];
+	
+	Main.find({pagename: regex}, function(err, docs){
+		if(err)	return next(err);
+		else {
+			var join = [];
+			for(i=0; i<docs.length; i++){
+//				if(docs[i].inArray(req.user.userId)){
+				if(docs[i].inArray(1)){
+//					console.log('Are we there yet!');
+					docs[i].type = 1;
+					join.push(1);
+				} else {
+//					console.log('Thanks God!');
+					docs[i].type = -1;
+					join.push(-1);
+				}
+			}
+			res.send({success:1, 
+				msg:'page list', 
+//				join: join, 
+				result: docs
 			});
 		}
 	});
+	/*inArray(userId) 함수를 돌려서 팔로우 중이면 1을, 해당 없으면 -1을 넣어서
+	join Array를 만듬. 검색된 페이지를 팔로우중인지 아닌지 구분하기 위해.
+	docs[i].inJoined = 1 이렇게 추가해서 res.send()하면 이상하게 .isJoined 변수가 undefined된체로 전송됨.
+	살짝 변형해서 docs[i].type의 값을 바꿔서 보내면 또 보내짐.. 왜지?
+	어차피 docs[i].save를 하는게 아니기때문에 type 값에 -1,1 을 넣어서 보내도 상관은 없음
+	*/
+});
 
-}
-function getPageRoutes(req, res, next) {
-	var pageId = req.params.pageId
-	if(pageId){
-		Page.findOne({pageId: pageId})
-		.exec(function(err, doc){
-			if(err) return next(err);
-			if(!docs){
-				res.send({success: 1, msg:'Page Not Found', result: null});
+
+router.get('/write300', function (req, res, next) {
+  for(var i = 0; i<300; i++) {
+	  var info = {
+				admin: [i],
+				univId: i,
+				type: 1,
+				pagename: 'pagename '+ i,
+				followers: [],
+				requests: [],
+			};
+	  var page = new Main(info);
+
+	  page.save(function (err, doc) {
+		  if(err) console.error('err', err);
+	  });
+  }
+  	res.send({msg:'300개 저장성공'});
+});
+
+//router.get('/read/:page/:boardId', function (req, res, next) {
+//	//현재 구조상 req.params.page#은 아무거나 넣어도상관없음.
+//	var page = req.params.page;
+//	var boardId = req.params.boardId;
+//
+//	Board.update( {"boardId" : boardId}, {"$inc" : {"viewCount" : 1}}, function (err, doc) {
+//		if (err) return next(err);
+//
+//		Board.find({"boardId" : boardId} , function (err, docs) {
+//			if (err) return next(err);
+//			res.send({success:1, msg:'read board', result: docs[0]});
+//		});
+//	});
+//
+//});
+//
+//
+//router.get('/update/:page/:boardId', function (req, res, next) {
+//	var page = req.params.page;
+//	var boardId = req.params.boardId;
+//
+//	Board.findOne({"boardId" : boardId}, function (err, doc) {
+//		if (err) return next(err);
+//		console.log('doc', doc);
+//		res.send({success:1, msg: 'update get request', result: doc});
+//	});
+//});
+
+router.post('/update', function (req, res, next) {
+	console.log('req.body:', req.body);
+	var pageId = req.body.pageId;
+	var info = { updatedAt: Date.now() };
+	if(req.body.admin)	info.admin = req.body.admin;
+	if(req.body.univId)	info.univId = req.body.univId;
+	if(req.body.type)	info.type = req.body.type;
+	if(req.body.pagename)	info.pagename = req.body.pagename;
+	
+	var page = info;
+
+	Main.update({ "pageId" : pageId }, {$set : page}, function (err, doc) {
+		if (err) return next(err);
+		if (doc.n == 1){
+			res.send({success:1, msg: 'updates complete', result: doc});
+		} else {
+			res.send({success:0, msg: 'failed to updates', result: null});
+		}
+	});
+});
+
+//follow confirm
+router.post('/confirm', function (req, res, next) {
+	console.log('/confirm req.body:', req.body);
+	var pageId = req.body.pageId;
+	var userId = req.body.userId;
+	var admin = [req.body.admin];
+	if( pageId !== undefined && userId !== undefined && admin !== undefined){
+		console.log("admin: ",admin);
+		Main.update(
+				{
+					"pageId" : pageId,
+					"followers":{"$ne": userId},
+					"requests": userId,
+					"admin": {"$in": admin}
+				},
+				{
+					"$inc" : {"fCount": 1, "rCount": -1}, 
+					"$push": {"followers": userId},
+					"$pull": {"requests": userId},
+					"$set": {"updatedAt": Date.now()}
+				}, function (err, doc) {
+			if (err) return next(err);
+			if (doc.n == 1){
+				res.send({success:1, msg: 'confirm inc complete', result: doc});
 			} else {
-				res.send({success: 1, msg:'Page Found', result: doc});
+				res.send({success:0, msg: 'failed to confirm updates', result: null});
 			}
 		});	
+		
 	} else {
-		res.send({msg: 'params undefined'});
+		res.send({success:0, msg: 'args undefined', result: null});
 	}
-}	//getPageRoutes
+});
 
-function addPageRoutes(req, res, next) {
-
-	var pageId = parseInt(req.body.pageId);
-	console.log(pageId);
-//	Page.find({pageId: pageId}).exec(function(err, doc){
-	Page.findOne({pageId: pageId}).exec(function(err, doc){
-		if(err) return next(err);
-		if(doc){
-			return res.send({
-				success: 1,
-				msg: 'already exists',
-				result: null
-			}); 
-		} else {
-			var info = {
-					admin: [req.body.admin],
-					univId: req.body.univId,
-					pagename: req.body.pagename,
-					type: req.body.type,
-					followers:[],
-					requests:[]					
-			};
-			var page = new Page(info);
-			addPage(req, res, next, page);
-		}
-	});
-}
-
-function addPage(req, res, next, page) {
-	if(!page){
-		//case of undefined
-		return res.json(404, { msg : 'page undefined.' });
-	} else {
-		page.save(function(err, doc){
-			if(err) return next(err);
-			res.send({success: 1, msg:'page successfully saved', result: doc});
-		});
-	}
-};
-
-function updatePage(req, res, next, page) {
-	Page.update({ pageId : page.pageId }, 
-			{ $set: { replies : commentThread.replies }
-	}).exec(function(err, savedPage) {
-		if (err) {
-			res.json(404, {
-				msg : 'Failed to update Page.'
-			});
-		} else {
-			res.json({
-				success: 1,
-				msg : "Update page success",
-				result: savedPage
-			});
-		}
-	});	
-}
-
-
-//findById를 쓰면 createFrom... 안하고 그냥 스트링 넣을 수 있음
-//이 함수가 처음엔 해당글(photo나 page 등이 코멘트쓰레드에 해당하는 commentId 를 갖고 있음
-//init.js에서 commentThread 생성해서 그 아이디를 photo나 page가 각각 갖고 있음
-//그래서 _id로 검색하는 것 
-//근데 나는 인풋으로 받은 글넘버랑 코멘트쓰레드 스키마의 boardId랑 비교해서 같으면 보내려 함
-
-function getBoardRoutes(req, res, next) {
-	Board.find({pageId:req.params.boardId})
-	.exec(function(err, boards){
-		if(err) return next(err);
-		if(!boards){
-			res.send({success: 1, msg:'Boards Not Found', result: null});
-		} else {
-			res.send({success: 1, msg:'Boards Found', result: boards});
-		}
-	});
-};
-
-/*
---postman 요청시--
-boardId: board.id,
-body: 댓글 내용
-parentCommentId: board.commentId //대댓글의 경우 해당 댓글의 ObjectId
-*/
-function addBoardRoutes(req, res, next) {
-	
-	Page.findOne({univId:req.body.univId, pageId: req.body.pageId}).exec(function(err, page){
-		if(err) return next(err);
-		if(!page){
-			return res.send({success:1, msg:'Page Not Found', result: null});
-		} else {
-			var info = {
-				univId: req.body.univId,
-				writer: req.body.writer,
-				pageId: req.body.pageId,
-				type: req.body.type,
-				title: req.body.title,
-				body: req.body.body,
-//				viewCount: 0,
-//				likeCount: 0,
-				likes: [],
-			};
-			var board = new Board(info);
-			board.save(function(err, doc){
-				if(err) return next(err);
-				else {
-					res.send({success:1, msg:'Board saved', result: doc});
-				}
-			});
-		}
-	});
-};	
-
-function updateCommentThread(req, res, commentThread) {
-	CommentThread.update({ _id : commentThread.id }, 
-			{ $set: { replies : commentThread.replies }
-	}).exec(function(err, savedComment) {
-		if (err) {
-			res.json(404, {
-				msg : 'Failed to update CommentThread.'
-			});
-		} else {
-			res.json({
-				success: 1,
-				msg : "Update Comment success",
-				result: savedComment
-			});
-		}
-	});
-}
-
-function addComment(req, res, commentThread, currentComment, parentId, newComment) {
-	console.log("parentId:", parentId);
-	if(!parentId){
-		//case of undefined
-		return res.json(404, { msg : 'parentId undefined.' });
-	}
-	if (commentThread.id == parentId) {
-		commentThread.replies.push(newComment);
-		updateCommentThread(req, res, commentThread);
-	} else {
-		for (var i = 0; i < currentComment.replies.length; i++) {
-			var c = currentComment.replies[i];
-			if (c._id == parentId) {
-				c.replies.push(newComment);
-				var replyThread = commentThread.replies.toObject();
-				updateCommentThread(req, res, commentThread);
-				break;
+//follow requests
+router.post('/request', function (req, res, next) {
+	console.log('/request req.body:', req.body);
+	var pageId = req.body.pageId;
+	var userId = req.body.userId;
+//	console.log('/like args:', userId);
+	if( pageId != undefined && userId != undefined){
+		Main.update(
+				{
+					"pageId" : pageId,
+					"followers":{"$ne": userId},
+					"requests":{"$ne": userId}
+				},
+				{
+					"$inc" : {"rCount": 1}, 
+					"$push": {"requests": userId},
+					"$set": {"updatedAt": Date.now()}
+				}, function (err, doc) {
+			if (err) return next(err);
+			if (doc.n == 1){
+				res.send({success:1, msg: 'requests inc complete', result: doc});
 			} else {
-				addComment(req, res, commentThread, c, parentId, newComment);
+				res.send({success:0, msg: 'failed to requests updates', result: null});
 			}
-		}
+		});
+	} else {
+		res.send({success:0, msg: 'args undefined', result: null});
 	}
-};
-function updateCommentThread(req, res, commentThread) {
-	CommentThread.update({ _id : commentThread.id }, 
-			{ $set: { replies : commentThread.replies }
-	}).exec(function(err, savedComment) {
-		if (err) {
-			res.json(404, {
-				msg : 'Failed to update CommentThread.'
-			});
+});
+
+router.post('/follow/:status', function (req, res, next) {
+	var status = req.params.status;
+	var pageId = req.body.pageId;
+//	var userId = req.body.userId;
+	if( pageId != undefined && status != undefined){
+		
+		
+		Board.update(
+				{
+					"boardId" : boardId, 
+					"likes": userId 
+				},
+				{
+					"$inc" : {"likeCount": -1}, 
+					"$pull": {"likes": userId},
+					"$set": {"updatedAt": Date.now()}
+				}, function (err, doc) {
+			if (err) return next(err);
+			if (doc.n == 1){
+				res.send({success:1, msg: 'dislike inc complete', result: doc});
+			} else {
+				res.send({success:0, msg: 'failed to dislike updates', result: null});
+			}
+		});
+	} else {
+		res.send({success:0, msg: 'args undefined', result: null});
+	}
+});
+
+router.post('/delete', function (req, res, next) {
+	var page = req.body.page;
+	var pageId = req.body.pageId;
+	var admin = [req.body.admin]
+	Board.remove({"pageId" : pageId, "admin":{"$in":admin}}, function (err, doc) {
+		if (err) {return next(err);}
+		console.log('doc', doc);
+		if (doc.result.n === 1 ){
+			res.send({success:1, msg: 'remove complete', result: doc});
 		} else {
-			res.json({
-				success: 1,
-				msg : "Update Comment success",
-				result: savedComment
-			});
+			res.send({success:0, msg: 'failed to remove', result: null});
 		}
 	});
-}
-function generateRandomUsername() {
-	// typically the username would come from an authenticated session
-	var users = [ 'DaNae', 'Brad', 'Brendan', 'Caleb', 'Aedan', 'Taeg' ];
-	return users[Math.floor((Math.random() * 5))];
-}
+});
 
 module.exports = router;
