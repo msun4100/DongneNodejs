@@ -36,13 +36,11 @@ PageSchema.plugin(autoIncrement.plugin,
 
 var Page = mongoose.model('Page', PageSchema);
 Page.prototype.inArray = function(value) {
-	// Returns true if the passed value is found in the
-	// array. Returns false if it is not.
+	// Returns true if the passed value is found in the array. Returns false if it is not.
 	var i;
 	for (i = 0; i < this.followers.length; i++) {
 		console.log("this.followers["+i+"]", this.followers[i]);
 		if (this.followers[i] === value) {
-			
 			return true;
 		}
 	}

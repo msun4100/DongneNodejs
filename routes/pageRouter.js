@@ -38,6 +38,7 @@ router.get('/list', function (req, res, next) {
 	router.handle(req, res, next);
 });
 
+//라우팅할때 mUtil.auth를 미들웨어로 둬서 inArray() 함수의 인자로 userId를 넘겨주도록 구현
 router.get('/list/:pagename', function(req, res, next) {
 	
 	var pagename = req.params.pagename;
@@ -210,34 +211,34 @@ router.post('/request', function (req, res, next) {
 	}
 });
 
-router.post('/follow/:status', function (req, res, next) {
-	var status = req.params.status;
-	var pageId = req.body.pageId;
-//	var userId = req.body.userId;
-	if( pageId != undefined && status != undefined){
-		
-		
-		Board.update(
-				{
-					"boardId" : boardId, 
-					"likes": userId 
-				},
-				{
-					"$inc" : {"likeCount": -1}, 
-					"$pull": {"likes": userId},
-					"$set": {"updatedAt": Date.now()}
-				}, function (err, doc) {
-			if (err) return next(err);
-			if (doc.n == 1){
-				res.send({success:1, msg: 'dislike inc complete', result: doc});
-			} else {
-				res.send({success:0, msg: 'failed to dislike updates', result: null});
-			}
-		});
-	} else {
-		res.send({success:0, msg: 'args undefined', result: null});
-	}
-});
+//router.post('/follow/:status', function (req, res, next) {
+//	var status = req.params.status;
+//	var pageId = req.body.pageId;
+////	var userId = req.body.userId;
+//	if( pageId != undefined && status != undefined){
+//		
+//		
+//		Board.update(
+//				{
+//					"boardId" : boardId, 
+//					"likes": userId 
+//				},
+//				{
+//					"$inc" : {"likeCount": -1}, 
+//					"$pull": {"likes": userId},
+//					"$set": {"updatedAt": Date.now()}
+//				}, function (err, doc) {
+//			if (err) return next(err);
+//			if (doc.n == 1){
+//				res.send({success:1, msg: 'dislike inc complete', result: doc});
+//			} else {
+//				res.send({success:0, msg: 'failed to dislike updates', result: null});
+//			}
+//		});
+//	} else {
+//		res.send({success:0, msg: 'args undefined', result: null});
+//	}
+//});
 
 router.post('/delete', function (req, res, next) {
 	var page = req.body.page;
