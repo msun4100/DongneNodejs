@@ -28,13 +28,16 @@
 //=============================================================
 var mongoose = require('mongoose');
 //var conn = require('./mongodbConfig');
+var connection = require('./mongodbConfig');
 
 var MovieSchema = mongoose.Schema({
    title : String,
    director : String,
    year : Number,
    poster : String,
-   reviews : [String]
+   img:{data: Buffer, contentType:String},
+   reviews : [String],
+   pic:{id: mongoose.Schema.Types.ObjectId, contentType: String} 
 });
 
 MovieSchema.methods.addReview = function(review) {

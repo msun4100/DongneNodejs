@@ -38,10 +38,21 @@ var config = {
 	mongodb: {
 		name: 'dongne',
 		port: 27017,
-		url: 'localhost'	
+		url: 'localhost',
+		poolSize: 1
 	},
 	board: {
 		pageSize: 10
+	},
+	multiparty: {
+		connString: "mongodb://localhost/dongne",
+		maxFieldSize: 8192, 
+		maxFields: 10, 
+		autoFiles: false,
+		
+		mulChunks: "mul.chunks",
+		profileChunks: "profile.chunks",
+		boardChunks: "board.chunks"
 	}
 	
 	

@@ -5,7 +5,7 @@ var mongoose = require('mongoose'),
 var dbURI = 'mongodb://'+ config.mongodb.url + '/' + config.mongodb.name;
 //var dbURI = 'mongodb://'+ config.mongodbUrl + '/comments';
 //get the database connection pool
-mongoose.connect(dbURI,{server: { poolSize: 1 }});
+mongoose.connect(dbURI,{server: { poolSize: config.mongodb.poolSize }});
 //mongoose.connect(dbURI);
 var conn = mongoose.connection;	
 //DB Connection Events

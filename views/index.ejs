@@ -1,1 +1,18 @@
 Index
+<br/><br/>
+<form action="updatePic" method="POST" enctype="multipart/form-data">
+	<div class="form-group">
+		<label for="title">title</label>
+		<input type="text" class="form-control" id="title" placeholder="title" name="title">
+	</div>
+	<div class="form-group">
+		<label for="director">director</label>
+		<input type="text" class="form-control" id="director" placeholder="director" name="director">
+	</div>
+	<div class="form-group">
+		<label for="year">year</label>
+	    <input type="number" class="form-control" id="year" placeholder="year" name="year">
+	</div>
+	<input type="file" name="photo" />
+	<button type="submit">Submit</button><br/>
+</form>
