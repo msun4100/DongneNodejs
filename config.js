@@ -42,7 +42,7 @@ var config = {
 		poolSize: 1
 	},
 	board: {
-		pageSize: 10
+		pageSize: 10	//board list paging size
 	},
 	multiparty: {
 		connString: "mongodb://localhost/dongne",
@@ -53,8 +53,10 @@ var config = {
 		mulChunks: "mul.chunks",
 		profileChunks: "profile.chunks",
 		boardChunks: "board.chunks"
+	},
+	gcm: {
+		apiKey: "AIzaSyBMjOPg1TvJd6r-rWfi56qWkB3LOpvtXbo"
 	}
-	
 	
 };
 
