@@ -14,7 +14,8 @@ var express = require('express'),
 	config = require('./config'),
 	io = require('./socket.io'),
 	passport = require('./passport'),
-	morgan = require('morgan');
+	morgan = require('morgan'),
+	gcmProvider = require('./middleware/gcmProvider');
 
 app.set('view engine', 'ejs');
 app.set('view options', {defaultLayout: 'layout'});

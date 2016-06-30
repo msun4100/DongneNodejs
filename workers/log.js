@@ -1,6 +1,8 @@
-var rabbitPromise = require('../queue/rabbit'), config = require('../config');
+var rabbitPromise = require('../queue/rabbit'), 
+	config = require('../config');
 
 rabbitPromise.done(function(rabbit) {
+//	message: {method: req.method, url: req.url, ts: Date.now()}
 	rabbit.queue('debug.log', {
 		autoDelete : false
 	}, function(q) {
@@ -20,5 +22,4 @@ rabbitPromise.done(function(rabbit) {
 					+ JSON.stringify(message));
 		});
 	});
-
 });

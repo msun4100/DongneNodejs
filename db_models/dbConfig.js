@@ -7,10 +7,10 @@ var dbConfig = {
 //	connectionLimit: 250,
 	host: '127.0.0.1',
 	user: 'root',	// root
-	password: '1111',	// 1119
+	password: '',	// 1119
 	port: 3306,
 	multipleStatements : true,
-	database: 'dongne'
+	database: 'gcm_chat'
 };
 
 // pool 변수에 connection에 쓸 mysql Pool 값을 저장
