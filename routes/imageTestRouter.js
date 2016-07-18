@@ -57,37 +57,72 @@ uploads파일에 임시로 올려서( multer 사용) 거기 있는 파일을 pho
 finally 함수에서 uploads 폴더의 임시파일 삭제
 /getPic/:objectId 로 해당 이미지 받아 볼수 있음
 */
-router.post('/updatePic', multer({dest:'./uploads'}).single('photo'),function (req,res,next) {
+router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),function (req,res,next) {
 	
 	console.log("req.file:", req.file);
-	console.log( req.body.title);
-	
+	console.log("req.body", req.body);
+
+	var userId = req.params.userId;
 	dbService.writeFileToDb({
 		readStream:fs.createReadStream(req.file.path),
 		fileName:req.file.originalname,
 		collection:'photos'
-	})
-	.then(function (objectId) {
-		res.send(objectId);
+	}).then(function (objectId) {
+		console.log("objectId: ", objectId);
+		User.update({"userId": userId}, { "$set": {"pic": objectId}}, function(err, doc){
+			if(err) { console.log("err", err.message);return next(err); }
+			console.log("doc", doc);
+			if(doc.n === 1){
+				res.send({ error: false, message: ""+objectId, result: ""+objectId });
+			} else {
+				res.send({ error: true, message: "Failed to User's profile update" });
+			}
+		});
 	},function (error) {
-		res.status(500).send(error);
+		console.log("error: ", error.message);
+		res.send({ error: true, message: error.message });
+//		res.status(500).send(error);
 	}).finally(function () {
 		fs.unlink(req.file.path);	//uploads 폴더에 올라간 임시파일 삭제
 	});
 });
 
-router.get('/getPic/:objectId',function (req,res) {
-	dbService.readFileFromDb({
-//		objectId:req.query.fileId,
-		objectId:req.params.objectId,
-		writeStream:res,	//res가 아니라 docs[i].img/pic에 스트림연결 하면??
-		collection:'photos'
-	})//configurations
-	.then(function (objectId) {
-		res.end();
-	},function (error) {
-		res.status(500).send(error);
+router.get('/getPic/:userId',function (req, res, next) {
+	var userId = req.params.userId;
+	User.find({"userId": userId}).then(function(docs){
+		var pic = docs[0].pic;
+		dbService.readFileFromDb({
+			objectId: pic,
+			writeStream: res,	//res가 아니라 docs[i].img/pic에 스트림연결 하면??
+			collection:'photos'
+		})//configurations
+		.then(function (objectId) {
+			res.end();
+		},function (error) {
+			res.send({
+				error: true,
+				message: error.message
+			});
+		});	
+	}, function(err){
+		res.send({
+			error: true,
+			message: 'User not found error'
+		});
 	});
+//	dbService.readFileFromDb({
+//		objectId:req.params.objectId,
+//		writeStream:res,	//res가 아니라 docs[i].img/pic에 스트림연결 하면??
+//		collection:'photos'
+//	})//configurations
+//	.then(function (objectId) {
+//		res.end();
+//	},function (error) {
+//		res.send({
+//			error: true,
+//			message: error.message
+//		});
+//	});
 });
 
 router.get('/images/init', initData);

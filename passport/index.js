@@ -8,6 +8,8 @@ var passport = require('passport'),
 	log = require('../middleware/log');
 var User = require('../db_models/userModel');
 
+var dbHandler = require('../db_models/dbHandler')();
+
 passport.use(new facebook({
 	clientID: config.facebook.appID,
 	clientSecret: config.facebook.appSecret,
@@ -138,13 +140,14 @@ var routes = function routes(app){
 //		{successRedirect: config.routes.chat, failureRedirect: config.routes.login, failureFlash: true}));
 	app.post(config.routes.login, function(req, res, next){
 		passport.authenticate('local',{failureFlash: true}, function(err, user, info) { 
-			if(err) { return next(err); }
+			if(err) {
+				return next(err); }
 			if(!user) {
 				console.log("info.message:", info.message);
 				return res.send({
-					success: 0,
-					msg: ""+info.message,
-					result: { lastLogin: 0}
+					error: true,
+					message:"Oops! An error occurred while login auth."
+//					user: {}	//client에서 error===true일시 받아서 쓰는 코드를 사용안하면 nullpointer Exception 안뜸.
 				});
 			}
 			/*
@@ -158,12 +161,32 @@ var routes = function routes(app){
 					console.log('req.login() Error!');
 					return next(err); 
 				}
-				console.log("req.user: ", req.user);
-				return res.send({
-					success: 1,
-					msg: "user.email: "+ user.userId,
-					result: { lastLogin: 1 }
+				dbHandler.createUser(user.userId, user.username, user.email)
+				.then(function (datas) {
+					res.send(datas);
+				},function (error) {
+					//chat은 response type이 다르기 때문에 next사용해서 에러 미들웨어로 보내면 에러 생길 듯, 대신 console로 로그 출력해서 확인
+					//나중에 컨피그 파일에 에러메시지 다 정해서 입력해서 컨피그 파일로 대체하고 에러 발생시 래빗큐로 로그 찍도록 수정
+					console.log(error);
+					res.send({
+						error:true, 
+						message:"Oops! An error occurred while registereing"
+					});
+				}).finally(function () {
+					console.log('finally functions');
 				});
+				//=================
+//				console.log("req.user: ", req.user);
+//				return res.send({ 
+//					error: false,
+//					user:{
+//						user_id: user.userId,
+//						name: user.username,
+//						email: user.email,
+//						created_at: user.createdAt
+//					}
+//				});
+				//=================
 			});
 		})(req, res, next);
 	});

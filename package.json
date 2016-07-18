@@ -40,7 +40,9 @@
     "bluebird": "^2.10.2",
     "multer": "^1.0.6",
     "multiparty": "^4.1.2",
-    "node-gcm": "*"
+    "node-gcm": "*",
+    "mysql": "^2.10.2",
+    "request": "2.36.0"
   },
   "devDependencies": {},
   "repository": "",

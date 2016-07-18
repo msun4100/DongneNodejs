@@ -23,7 +23,7 @@ conn.on('connected', function() {
 	
 //when the connection has disconnected
 conn.on('disconnected', function() {
-	console.log('Database connection has disconnected.');
+	console.log('Mongoose connection has disconnected.');
 });
 	
 //If the Node.js process is going down, close database

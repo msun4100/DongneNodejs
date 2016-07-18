@@ -23,30 +23,32 @@ function register(req, res){
 };
 
 function registerProcess(req, res, next){
-//	userId: {type: Number, unique: true },
-//	email: {type: String, unique: true },
-//	password: String,
-//	pushId: String,
-//	username: String,
-//	univ: [{univId:Number, name:String, dept:String, enterYear:Number, isGraduate:{ type: Number, default: 0 }}],
-//	job: { name:String, team:String },
-//	desc: [ String ],
-//	sns: [ String ],
-//	pic: String,
-//	createdAt: { type: Date, default: Date.now },
-//	salt: {type: String},
-//	work: {type: Number},
-//	provider: {type: String}
+
+//	var data = req.body.univ;
+//	var univInfo = {
+//		univId: data[0],
+//		deptId: data[1],
+//		enterYear: data[2],
+//		isGraduate: data[3],
+//	};
+////	job: { name:String, team:String }
+//	var data2 = req.body.job;
+//	var jobInfo = {
+//			name: data2[0],
+//			team: data2[1]
+//	};
+	console.log("index.js->req.body", req.body);
+//	console.log("index.js->univ:", univInfo);
+//	console.log("index.js->job:", jobInfo);
 	if (req.body.email && req.body.password)
 	{
 		var info = {
-//				userId:
 				email: req.body.email,
 				password: req.body.password,
 				pushId: req.body.pushId,
 				username: req.body.username,
-				univ:[],
-				job: "tempJob",
+				univ: [req.body.univ],
+				job: req.body.job,
 				desc:[],
 				sns:[],
 				pic: "temPicture",
@@ -56,21 +58,23 @@ function registerProcess(req, res, next){
 		};
 		User.addUser(info, function(err, profile){
 			if (err) {
-				return next(err);	//addUser 실패한 경우 === 같은 유저가 있음
+				res.send({error: true, messsage: 'register failure..'});		
+				return; 
+//				return next(err);	//addUser 실패한 경우 === 같은 유저가 있음
 			}else{
 				req.login(profile, function(err){
-					res.send({success: 1, msg: 'register complete', result: profile});
+					res.send({error: false, messsage: 'register complete', user: profile});
 				});
 			}
 		});
 	}else{
-		res.send({success: 0, msg: 'register failure', result: null});
+		res.send({error: true, messsage: 'register failure'});
 	}
 };
 
 function logOut(req, res){
 	util.logOut(req);
-	res.send({success: 1, msg:'logout', result: null});
+	res.send({error: false, messsage: 'Logout Successfully Complete'});
 //	res.redirect('/');
 };
 

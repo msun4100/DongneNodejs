@@ -55,9 +55,11 @@ var config = {
 		boardChunks: "board.chunks"
 	},
 	gcm: {
-		apiKey: "AIzaSyBMjOPg1TvJd6r-rWfi56qWkB3LOpvtXbo"
+		apiKey: "AIzaSyBMjOPg1TvJd6r-rWfi56qWkB3LOpvtXbo",
+//		apiKey: "AIzaSyDT49gnPm5mECM-JO0avOZZc06ErKYboDI",
+		PUSH_FLAG_CHATROOM: 1,
+		PUSH_FLAG_USER: 2
 	}
-	
 };
 
 module.exports = config;

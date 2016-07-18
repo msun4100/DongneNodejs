@@ -57,8 +57,11 @@ passport.routes(app);	//함수는 앱으로 실행되고, 이 앱은 익스프�
 
 app.use('/page', require('./routes/pageRouter'));// /page/xxx로 접속
 app.use('/board', [mUtil.checkPage], require('./routes/boardRouter'));// /board/xxx로 접속
-app.use(require('./routes/imageRouter'));	//for image upload tests
 
+app.use(require('./routes/migrationRouter'));	//testing for PHP Server migration
+app.use(require('./routes/univRouter'));	
+app.use(require('./routes/deptRouter'));	
+app.use(require('./routes/imageRouter'));	//for image upload tests
 //app.use(require('./routes/boardRouter'));	//  /xxx로 바로 접속
 app.use(require('./routes/friendRouter'));
 app.use(require('./routes/commentRouter'));

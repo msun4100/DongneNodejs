@@ -16,8 +16,8 @@ var UserSchema = Schema({
 	password: {type: String, required: true},
 	pushId: String,
 	username: String,
-	univ: [{univId:Number, name:String, dept:String, enterYear:Number, isGraduate:{ type: Number, default: 0 }}],
-	job: { name:String, team:String },
+	univ: [{univId:{type: Number, ref: 'University'}, deptId:{type: Number, ref: 'Department'}, enterYear:{type: Number, default: 2016}, isGraduate:{ type: Number, default: 0 }}],
+	job: { name:{type: String, default: ""}, team: {type: String, default: ""} },
 	desc: [ String ],
 	sns: [ String ],
 	pic: String,
@@ -115,7 +115,7 @@ UserSchema.methods.addUniv = function(univ) {
 	return this.save(); //promise객체로 리턴 됨
 };
 //static 은 User.xxx로 호출 method는  user = new User({}) --> user.xx 인스턴스로 호출
-UserSchema.index({ "univ.name": 1, "univ.dept": 1 }); 
+UserSchema.index({ "univ.univId": 1, "univ.deptId": 1 }); 
 
 UserSchema.plugin(autoIncrement.plugin, { model: 'User', field: 'userId', startAt: 0, incrementBy: 1});
 var User = mongoose.model('User', UserSchema);
@@ -154,8 +154,10 @@ module.exports = User;
 
 //dummy values
 //setupUsers();
+
+
 function setupUsers(){
-	for(var i=0; i<1000; i++){
+	for(var i=1100; i<1200; i++){
 		createUser(i);
 	}
 }
@@ -163,11 +165,13 @@ function saveUser(user){
 	user.save(function(err){
 		if(err) {
 			console.log('addUser.save() error occured..');
+		} else {
+			console.log(user.email+' saved');	
 		}
-		console.log(user.email+' saved');
+		
 	});
 }
-
+var year = [2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016];
 function createUser(i){
 	passUtil.passwordCreate("1234", function(err, salt, password){
 		user = new User({
@@ -175,7 +179,7 @@ function createUser(i){
 			password: password, //생성된
 			pushId: "temppushid" +i,
 			username: 'username'+i,
-			univ: [],
+			univ: [{univId: Math.floor(Math.random()* 8 ), deptId: Math.floor(Math.random()* 11 ), enterYear: year[Math.floor(Math.random()* 9)], isGraduate: Math.floor(Math.random()* 2)}],
 			job: {},
 			desc: [],
 			sns: [],
@@ -187,6 +191,8 @@ function createUser(i){
 		saveUser(user);
 	});	
 }
+
+
 
 //function getUsersinRoom(room){
 //	return q.Promise(function(resolve, reject, notify){
