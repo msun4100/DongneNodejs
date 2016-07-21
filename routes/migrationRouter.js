@@ -14,10 +14,16 @@ router.post('/user/login', function(req, res, next){
 	 * User login or registration
 	 * params: name, email
 	*/
+	console.log("inner /user/login func");
 	var name = req.body.name;
 	var email = req.body.email;
 	var user_id = -1;
-	dbHandler.createUser(user_id, name, email)
+	var univId = req.body.univId;	//android login시
+	if(univId === null || univId === "" || univId === undefined) {
+		console.log("/user/login univId error");
+		univId = 0;
+	}
+	dbHandler.createUser(user_id, name, email, univId)
 	.then(function (datas) {
 		res.send(datas);
 	},function (error) {
@@ -29,7 +35,7 @@ router.post('/user/login', function(req, res, next){
 			message:"Oops! An error occurred while registereing"
 		});
 	}).finally(function () {
-		console.log('finally functions');
+//		console.log('finally functions');
 	});
 });
 
@@ -49,8 +55,6 @@ router.put('/user/:id', function(req, res, next){
 			error:true, 
 			message:"Failed to update GCM registration ID"
 		});
-	}).finally(function () {
-//		console.log('finally functions');
 	});
 	
 });

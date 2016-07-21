@@ -26,6 +26,6 @@ module.exports.getCurrentTimeStamp = function() {
 	          [d.getHours(),
 	           d.getMinutes(),
 	           d.getSeconds()].join(':');
-	console.log("timeStamp.js->dfotmat:", dformat);
+//	console.log("timeStamp.js->dfotmat:", dformat);
 	return dformat;	
 };

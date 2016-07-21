@@ -6,12 +6,12 @@ var express = require('express'),
 var User = require('../db_models/userModel'),
 	Friend = require('../db_models/friendModel');
 
+var gpsProvider = require('../gpsProvider')();
+
 //router.post('/friends/:friend', addFriends); //deprecated
 router.get('/friends/:status', [mUtil.requireAuthentication], showFriends);
 router.post('/friends/:status', [mUtil.requireAuthentication], updateFriends);
-
-
-
+router.get('/friends/univ/:univId', [mUtil.requireAuthentication], showUnivUsers);
 function updateFriends(req, res, next) {
 	var status = req.params.status;
 
@@ -118,6 +118,84 @@ function addFriends(req, res, next) {
 	});
 }
 
+var inArray = function(value) {
+	// Returns true if the passed value is found in the array. Returns false if it is not.
+	var i;
+	for (i = 0; i < this.followers.length; i++) {
+		console.log("this.followers["+i+"]", this.followers[i]);
+		if (this.followers[i] === value) {
+			return true;
+		}
+	}
+	return false;
+};
+
+function showUnivUsers(req, res, next) {
+	var univId = req.params.univId;
+	var user = req.user;
+//	console.log(req.user);
+	async.waterfall([ 
+	        function (callback) {
+	        	//전체 대학교 유저리스트
+	        	console.time('TIMER');	//실행시간 체크 스타트
+	        	User.find({"univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+	        	.sort({username: 1}).exec(function(err, users){
+	        		if(err) callback(err, null);
+	        		else callback(null, users);
+	        	});
+	        },
+	        function (users, callback) {
+	        	//find accepted friends and fetch isFriend
+	        	var query = Friend.find();
+	    		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ])
+	    		query.select({_id:0});
+//	    		query.sort({ userId: 1});
+	    		query.exec().then(function fulfilled(results) {
+	    			console.time('TIMER-ISFRIEND');
+	    			var ids = [];
+	    			var i, j;
+	    			for(i=0; i < results.length; i++){
+	    				if(results[i].from === user.userId){
+	    					ids.push(results[i].to);	
+	    				} else if(results[i].to === user.userId){
+	    					ids.push(results[i].from);	
+	    				}
+	    			}
+	    			for(i=0; i < ids.length; i++){
+	    				for (j = 0; j < users.length; j++) {
+	    					if (users[j].userId === ids[i]) {
+	    						users[j].isFriend = true;
+	    						break;
+	    					}
+	    				}
+	    			}
+	    			console.timeEnd('TIMER-ISFRIEND');
+	    			callback(null, users);
+	    		}, function rejected(err) {
+	    			callback(err, null);
+	    		});
+	        },
+	        function (users, callback) {
+	        	fetchDistance(user.location, users, function(err, list) {
+					if (err) callback(err, null);
+					else {
+						callback(null, list);
+					}
+				});
+			}],
+			function (err, list) { 
+				if(err) { res.send({ error: true, message: err.message}); }
+				else{
+					console.timeEnd('TIMER');
+					res.send({
+						error : false,
+						message : 'univ all friends: ' + list.length,
+						result : list
+					});
+				} 
+			});
+}
+
 function showFriends(req, res, next){
 	
 //	status
@@ -128,15 +206,8 @@ function showFriends(req, res, next){
 //	3 blocked .and({from:3, status:3})	//차단한
 	
 	var status = req.params.status;
-
 	var user = req.user;
-//	if( user ){
-//		
-//	} else {
-//		var err={ code: 500, message: 'do not login'};
-//		next(err);
-//	}	
-
+//	console.log("user.location", user.location);
 	switch(status){
 	case "0":
 		var list = [];
@@ -152,18 +223,20 @@ function showFriends(req, res, next){
 					ids.push(results[i].from);	
 				}
 			}
-			User.find({ "userId":{$in: ids} }, function(err, users){
+			User.find({ "userId":{$in: ids} }, {_id:0, password:0, salt:0, work:0, updatedAt:0, createdAt:0, __v:0, "univ._id":0 },function(err, users){
 				if(users.length != 0){
-					res.send({
-						success : 1,
-						msg:'pending-0 friends: ' + users.length,
-						result : users
-					});		
+					fetchDistance(user.location, users, function(err, list){
+						if(err) return next(err);
+						res.send({
+							error : false,
+							message:'pending-0 friends: ' + users.length,
+							result : list
+						});						
+					});
 				} else {
 					res.send({
-						success : 0,
-						msg:'has no pending-0 friends',
-						result : []
+						error : true,
+						message:'has no pending-0 friends',
 					});	
 				}
 			});
@@ -171,24 +244,6 @@ function showFriends(req, res, next){
 			err.code = 500;
 			next(err);
 		});
-//		var query = Friend.find({$or:[{"from": user.userId}, {"to": user.userId}]});
-//		var list = [];
-//		query.exec(function(err, docs){
-//			if(err) callback(err, null);
-//			for(i = 0; i < docs.length; i++){
-//				if(docs[i].from === user.userId){
-//					User.findOne({userId: docs[i].to}, function(err, user){
-//						list.push(user);
-//					});
-//				} else if(docs[i].to === user.userId){
-//					User.findOne({userId: docs[i].from}, function(err, user){
-//						list.push(user);
-//					});
-//				}
-//			}
-//			callback(null, list);
-//		});
-		
 		break;
 	case "00":
 		var query = Friend.find();
@@ -206,15 +261,14 @@ function showFriends(req, res, next){
 			User.find({ "userId":{$in: ids} }, function(err, users){
 				if(users.length != 0){
 					res.send({
-						success : 1,
-						msg:'pending-00 friends',
+						error : false,
+						message:'pending-00 friends',
 						result : users
 					});		
 				} else {
 					res.send({
-						success : 0,
-						msg:'has no pending-00 friends',
-						result : []
+						error : true,
+						message:'has no pending-00 friends',
 					});	
 				}
 			});
@@ -228,10 +282,11 @@ function showFriends(req, res, next){
 //	 	query.mod('size',2,0);
 //	 	query.where('friends').gt(6);
 //		query.or([{from: 3},{to: 3}]);
-		query.and([ {$or:[{from: user.userId},{to: user.userId}]}, {status: 1} ])
+//		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {actionUser: user.userId}, {status: 2}  ])
+		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ])
 //		query.where('userId').in( friends );
 //	 	query.limit(10);
-		query.select({_id:0, from:1, to:1, status:1, actionUser:1, updatedAt:0});
+		query.select({_id:0});
 //		query.sort({ userId: 1});
 		query.exec().then(function fulfilled(results) {
 			var ids = [];
@@ -245,43 +300,22 @@ function showFriends(req, res, next){
 			User.find({ "userId":{$in: ids} }, function(err, users){
 				if(users.length != 0){
 					res.send({
-						success : 1,
-						msg:'accepted friends',
+						error : false,
+						message:'accepted friends ' + users.length,
 						result : users
 					});		
 				} else {
 					res.send({
-						success : 0,
-						msg:'has no accepted friends',
-						result : []
+						error : true,
+						message:'has no accepted friends',
 					});	
 				}
 			});
 		}, function rejected(err) {
+			console.log("reject");
 			err.code = 500;
 			next(err);
 		});
-		
-		
-//		query.exec(function(err, docs){
-//			if(err){
-////				err.code = 500;
-//				next(err);
-//			} 
-//			if(docs.length != 0){
-//				res.send({
-//			    	success:1,
-//			    	msg:'accepted friends',
-//			    	result:docs
-//			    });	
-//			} else {
-//				res.send({
-//			    	success:0,
-//			    	msg:'has no accepted friends',
-//			    	result:[]
-//			    });
-//			}
-//		});
 		break;
 	case "2":
 		var ids = [];
@@ -301,15 +335,14 @@ function showFriends(req, res, next){
 			User.find({ "userId":{$in: ids} }, function(err, users){
 				if(users.length != 0){
 					res.send({
-						success : 1,
-						msg:'declined friends',
+						error : false,
+						message:'declined friends',
 						result : users
 					});		
 				} else {
 					res.send({
-						success : 0,
-						msg:'has no declined friends',
-						result : []
+						error : true,
+						message:'has no declined friends',
 					});	
 				}
 			});
@@ -335,15 +368,14 @@ function showFriends(req, res, next){
 			User.find({ "userId":{$in: ids} }, function(err, users){
 				if(users.length != 0){
 					res.send({
-						success : 1,
-						msg:'blocked friends',
+						error : false,
+						message:'blocked friends',
 						result : users
 					});		
 				} else {
 					res.send({
-						success : 0,
-						msg:'has no blocked friends',
-						result : []
+						error : true,
+						message:'has no blocked friends',
 					});	
 				}
 			});
@@ -512,5 +544,24 @@ function showFriendsList(req, res, next){	//수정전. friends collection들의 
 	} //sw
 
 }	  
+
+function fetchDistance(refPoint, users, cb){
+	
+	var defaultValue = "somewhere";
+	var list= [];
+	var i, sum=0;
+	if(refPoint.lat === 99999 || refPoint.lon === 99999 || refPoint.lat === "" || refPoint.lon === ""){
+		for(i=0; i<users.length; i++){
+			users[i].temp = defaultValue;
+			list.push(users[i]);
+		}
+	} else {
+		for(i=0; i<users.length; i++){
+			users[i].temp = gpsProvider.getDistance( refPoint.lat, refPoint.lon, users[i].location.lat, users[i].location.lon);
+			list.push(users[i]);
+		}	
+	}
+	return cb(null, list);
+}
 
 module.exports = router;

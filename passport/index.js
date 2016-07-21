@@ -51,6 +51,9 @@ passport.use(new local({
 								console.log('pushId Change Error');
 							});
 						}
+						if(req.body.univId !== null || req.body.univId !== undefined){
+							profile.univId = req.body.univId;
+						}
 						done(null, profile);
 					} else {
 						log.debug({message: 'Wrong Username or Password', username: email});
@@ -161,9 +164,9 @@ var routes = function routes(app){
 					console.log('req.login() Error!');
 					return next(err); 
 				}
-				dbHandler.createUser(user.userId, user.username, user.email)
+				dbHandler.createUser(user.userId, user.username, user.email, user.univ[0].univId)
 				.then(function (datas) {
-					res.send(datas);
+					res.send( datas );
 				},function (error) {
 					//chat은 response type이 다르기 때문에 next사용해서 에러 미들웨어로 보내면 에러 생길 듯, 대신 console로 로그 출력해서 확인
 					//나중에 컨피그 파일에 에러메시지 다 정해서 입력해서 컨피그 파일로 대체하고 에러 발생시 래빗큐로 로그 찍도록 수정

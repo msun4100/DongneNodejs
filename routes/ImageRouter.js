@@ -22,8 +22,8 @@ var uploadDir = __dirname + '/uploads',
 	imageDir = __dirname + '/images';
 
 router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),function (req,res,next) {
-	console.log("req.file:", req.file);
-	console.log("req.body", req.body);
+//	console.log("req.file:", req.file);
+//	console.log("req.body", req.body);
 	var userId = req.params.userId;
 	dbService.writeFileToDb({
 		readStream: fs.createReadStream(req.file.path),
@@ -33,7 +33,7 @@ router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),fun
 		User.update({"userId": userId}, { "$set": {"pic": objectId}}, function(err, doc){
 			if(err) { return next(err); }
 			if(doc.n === 1){
-				res.send({ error: false, message: ""+objectId, result: ""+objectId });
+				res.send({ error: false, message: "userId: "+ userId, result: ""+objectId });
 			} else {
 				res.send({ error: true, message: "Failed to User's profile update" });
 			}
@@ -46,8 +46,12 @@ router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),fun
 });
 router.get('/getPic/:userId',function (req, res, next) {
 	var userId = req.params.userId;
+	console.log("/getPic/:userId");
 	User.find({"userId": userId}).then(function(docs){
 		var pic = docs[0].pic;
+		if(pic === ""){
+			return res.send({error: true, message: "empty thumbnail"});
+		}
 		dbService.readFileFromDb({
 			objectId: pic,
 			writeStream: res,	//res가 아니라 docs[i].img/pic에 스트림연결 하면??

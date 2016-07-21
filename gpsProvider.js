@@ -52,7 +52,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 	dist = Math.acos(dist);
 	dist = dist * 180/Math.PI;
 	dist = dist * 60 * 1.1515 * 1.609344;	//km로 환산
-	console.log("Before Conversion:", dist);
+//	console.log("Before Conversion:", dist);
 	var distance= dist;
 	if(dist < 1.0000000000000000){	//자릿수 맞춤
 		distance *= 1000;
@@ -67,12 +67,18 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
 
 //http://map.naver.com/?dlevel=12&pinType=site&pinId=13543575&x=126.7745364&y=37.7661170&enc=b64
-var lat1=37.7661170, lon1 =126.7745364;	//금촌역	
-var lat2=37.4519850, lon2 =126.6579650;	//인하대 후문
+//var lat1=37.7661170, lon1 =126.7745364;	//금촌역	
+//var lat2=37.4519850, lon2 =126.6579650;	//인하대 후문
 //http://map.naver.com/?dlevel=12&pinType=site&pinId=13407096&x=126.778725&y=37.76705&enc=b64 금촌 농협
 //var lat2=37.76705, lon2 =126.778725;
 
 //console.log(distance(lat1, lon1, lat2, lon2, "M"));
 //console.log(distance(lat1, lon1, lat2, lon2, "K").toFixed(1));
 //console.log(distance(lat1, lon1, lat2, lon2, "m"));
-console.log(getDistance(lat1, lon1, lat2, lon2));
+//console.log(getDistance(lat1, lon1, lat2, lon2));
+
+module.exports = function () {
+	return{
+		getDistance: getDistance
+	};
+};

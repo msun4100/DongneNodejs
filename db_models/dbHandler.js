@@ -7,7 +7,7 @@ var pool = require('./dbConfig'),
 	async = require('async'),
 	TimeStamp = require('../gcm/timeStamp');
 
-var createUser = function(user_id, name, email){
+var createUser = function(user_id, name, email, univId){
 	return new Promise(function (resolve, reject) {
 		isUserExists(email, function(err, isExists) {
 			if(err) reject(err);
@@ -16,7 +16,8 @@ var createUser = function(user_id, name, email){
 				pool.getConnection(function (err, conn) {      
 					if (err) {
 						console.log('error', err);
-						reject(err); 
+						reject(err);
+						return;
 					}
 					var input = [];
 					var sql = '';
@@ -32,17 +33,25 @@ var createUser = function(user_id, name, email){
 				    	if (err) {
 				           err.code = 500;
 				           conn.release();
-				           reject(err);
+				           return reject(err);
+				           
 				        }
-				    	conn.release();		//Insert query's connection.
 				    	getUserByEmail(email, function(err, user){
-				    		if(err) { 
-				    			reject(err); 
+				    		if(err) {
+				    			conn.release();		//Insert query's connection.
+				    			return reject(err); 
 				    		}
 				    		var datas = {
 				    			error: false,
-				    			user: user
+				    			user: {
+				    				user_id: user.user_id,
+				    				name: user.name,
+				    				email: user.email,
+				    				created_at: user.created_at,
+				    				univId: univId
+				    			}
 				        	};
+				    		conn.release();		//Insert query's connection.
 				    		resolve(datas);
 				    	});
 				    });
@@ -50,10 +59,16 @@ var createUser = function(user_id, name, email){
 			} else {
 				console.log("2-->", isExists);
 				getUserByEmail(email, function(err, user){
-					if(err) {console.log('error', err);reject(err);}
+					if(err) {console.log('error', err); return reject(err);}
 		    		var datas = {
 		    			error: false,
-		    			user: user
+		    			user: {
+		    				user_id: user.user_id,
+		    				name: user.name,
+		    				email: user.email,
+		    				created_at: user.created_at,
+		    				univId: univId
+		    			}
 		        	};
 		    		resolve(datas);
 		    	});

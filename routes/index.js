@@ -23,23 +23,7 @@ function register(req, res){
 };
 
 function registerProcess(req, res, next){
-
-//	var data = req.body.univ;
-//	var univInfo = {
-//		univId: data[0],
-//		deptId: data[1],
-//		enterYear: data[2],
-//		isGraduate: data[3],
-//	};
-////	job: { name:String, team:String }
-//	var data2 = req.body.job;
-//	var jobInfo = {
-//			name: data2[0],
-//			team: data2[1]
-//	};
-	console.log("index.js->req.body", req.body);
-//	console.log("index.js->univ:", univInfo);
-//	console.log("index.js->job:", jobInfo);
+	console.log("index.js->registerProccess->req.body", req.body);
 	if (req.body.email && req.body.password)
 	{
 		var info = {
@@ -51,23 +35,38 @@ function registerProcess(req, res, next){
 				job: req.body.job,
 				desc:[],
 				sns:[],
-				pic: "temPicture",
+				pic: "",
 //				salt:
 				work: config.crypto.workFactor,
-				provider: 'local'
+				provider: 'local',
+				location: req.body.location
 		};
 		User.addUser(info, function(err, profile){
 			if (err) {
+//				return next(err);	//addUser 실패한 경우 === 같은 유저가 있음
 				res.send({error: true, messsage: 'register failure..'});		
 				return; 
-//				return next(err);	//addUser 실패한 경우 === 같은 유저가 있음
 			}else{
 				req.login(profile, function(err){
-					res.send({error: false, messsage: 'register complete', user: profile});
+					//profile === session에 저장된 user
+					var newUser = {
+							univ: profile.univ,
+							job: profile.job,
+							desc: profile.desc,
+							sns: profile.sns,
+							temp: profile.temp,
+							pic: profile.pic,
+							username: profile.usernmae,
+							email: profile.email,
+							user_id: profile.userId
+					}
+					res.send({error: false, messsage: 'register complete'}); //클라이언트는 에러false리턴받으면 바로 로그인url요청
+//					res.send({error: false, messsage: 'register complete', user: newUser});
 				});
 			}
 		});
 	}else{
+		//flash: please fill out all the field.
 		res.send({error: true, messsage: 'register failure'});
 	}
 };

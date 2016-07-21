@@ -20,7 +20,7 @@ exports.requireAuthentication = function requireAuthentication(req, res, next){
 		next();
 	}else {
 //		res.redirect(config.routes.login);
-		res.send({success:0, msg:'requireAuth false.', result:null});	//인증이 사용되는 라우트 /chat 등을 그냥 하면 false
+		res.send({error: true, message: 'requireAuth false.'});	//인증이 사용되는 라우트 /chat 등을 그냥 하면 false
 	}
 };
 

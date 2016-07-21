@@ -34,7 +34,6 @@ var movieList = JSON.parse(initialDB);
 
 //====================================
 var rabbitPromise = require('../queue/rabbit');
-var gcmProvider = require('../middleware/gcmProvider');
 var exchange = require('../queue');
 router.get('/push', function(req, res, next){
 	rabbitPromise.done(function(rabbit) {

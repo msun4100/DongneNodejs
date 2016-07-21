@@ -16,7 +16,7 @@ var UserSchema = Schema({
 	password: {type: String, required: true},
 	pushId: String,
 	username: String,
-	univ: [{univId:{type: Number, ref: 'University'}, deptId:{type: Number, ref: 'Department'}, enterYear:{type: Number, default: 2016}, isGraduate:{ type: Number, default: 0 }}],
+	univ: [{univId:{type: Number, ref: 'University'}, deptId:{type: Number, ref: 'Department'}, deptname:{type: String, default: "학교사람들"}, enterYear:{type: Number, default: 2016}, isGraduate:{ type: Number, default: 0 }}],
 	job: { name:{type: String, default: ""}, team: {type: String, default: ""} },
 	desc: [ String ],
 	sns: [ String ],
@@ -25,29 +25,17 @@ var UserSchema = Schema({
 	updatedAt: { type: Date, default: Date.now },
 	salt: {type: String},
 	work: {type: Number},
-	provider: {type: String}
+	provider: {type: String},
+	location: { lat:{type: Number, default: 99999}, lon: {type: Number, default: 99999} },
 	
-	
+	//for response
+	temp: {type: String, default: ""},
+	isFriend: {type: Boolean, default: false}
 //	friends:[ Number ],
 	//ofObjectId: [Schema.Types.ObjectId],
 //	rooms:[Number]
 });
 
-//var info = {
-////		userId:
-//		email: req.body.email,
-//		password: req.body.password,
-//		pushId: req.body.pushId,
-//		username: req.body.username,
-//		univ:[],
-//		job: "tempJob",
-//		desc:[],
-//		sns:[],
-//		pic: "temPicture",
-////		salt:
-//		work: config.crypto.workFactor,
-//		provider: "local"
-//};
 
 UserSchema.statics.addUser = function(info, cb) {
 	this.find({ email : info.email}, function(err, docs){
@@ -68,6 +56,7 @@ UserSchema.statics.addUser = function(info, cb) {
 					salt: salt,	//생성된
 					work: info.work,
 					provider: "local",
+					location: info.location
 				});
 				user.save(function(err){
 					if(err) {
@@ -153,43 +142,59 @@ exports.addUser = addUser;
 module.exports = User;
 
 //dummy values
+var Dept = require('./departmentModel');
+
 //setupUsers();
-
-
 function setupUsers(){
-	for(var i=1100; i<1200; i++){
+	for(var i=0; i<5000; i++){
 		createUser(i);
 	}
 }
 function saveUser(user){
 	user.save(function(err){
 		if(err) {
-			console.log('addUser.save() error occured..');
+			console.log('addUser.save() error occured..' + err.message);
 		} else {
 			console.log(user.email+' saved');	
 		}
 		
 	});
 }
+//금촌역 lat1=37.7661170, lon1 =126.7745364;	//금촌역	
+//인하대 후문 lat2=37.4519850, lon2 =126.6579650;	//인하대 후문
+//신촌역x=126.936846&y=37.5552192&enc=b64
+//홍대입구x=126.9271257&y=37.5573934&enc=b64
+//부산역x=129.0393302&y=35.1144951&enc=b64
+var location = [{lat:"37.7661170", lon:"126.7745364"},
+                {lat:"37.4519850", lon:"126.6579650"},
+                {lat:"37.5552192", lon:"126.936846"},
+                {lat:"37.5573934", lon:"126.9271257"},
+                {lat:"35.1144951", lon:"129.0393302"}]; //문자열로 넣어도 넘버로 자동컨버팅 되는 듯
+
 var year = [2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016];
 function createUser(i){
-	passUtil.passwordCreate("1234", function(err, salt, password){
-		user = new User({
-			email: 'user'+i+'@gmail.com',
-			password: password, //생성된
-			pushId: "temppushid" +i,
-			username: 'username'+i,
-			univ: [{univId: Math.floor(Math.random()* 8 ), deptId: Math.floor(Math.random()* 11 ), enterYear: year[Math.floor(Math.random()* 9)], isGraduate: Math.floor(Math.random()* 2)}],
-			job: {},
-			desc: [],
-			sns: [],
-			pic: [],
-			salt: salt,	//생성된
-			work: config.crypto.workFactor,
-			provider: "local",
-		});
-		saveUser(user);
-	});	
+	var r = Math.floor(Math.random()* 19 ); //19 is depts.length
+	Dept.find({deptId: r}, function(err, doc){
+		passUtil.passwordCreate("1234", function(err, salt, password){
+			user = new User({
+				email: 'user'+i+'@gmail.com',
+				password: password, //생성된
+				pushId: "temppushid" +i,
+				username: 'username'+i,
+//				univ: [{univId: Math.floor(Math.random()* 8 ), deptId: Math.floor(Math.random()* 11 ), deptname: "", enterYear: year[Math.floor(Math.random()* 9)], isGraduate: Math.floor(Math.random()* 2)}],
+				univ: [{univId: doc[0].univId, deptId: doc[0].deptId, deptname: doc[0].deptname, enterYear: year[Math.floor(Math.random()* 9)], isGraduate: Math.floor(Math.random()* 2)}],
+				job: { team: "jobteam"+ i, name: "jobname"+i},
+				desc: [],
+				sns: [],
+				pic: "",
+				salt: salt,	//생성된
+				work: config.crypto.workFactor,
+				provider: "local",
+				location: location[Math.floor(Math.random()* 5 )]
+			});
+			saveUser(user);
+		});	
+	});
 }
 
 
