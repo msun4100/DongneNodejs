@@ -60,7 +60,7 @@ UserSchema.statics.addUser = function(info, cb) {
 				});
 				user.save(function(err){
 					if(err) {
-						console.log('addUser.save() error occured..');
+						console.log('addUser.save() error occured..::'+err);
 						return cb(err, null);	//email dup error.code 11000
 					}
 					return cb(null, user);

@@ -164,6 +164,8 @@ var routes = function routes(app){
 					console.log('req.login() Error!');
 					return next(err); 
 				}
+				console.log("req.login() user:", user);
+				
 				dbHandler.createUser(user.userId, user.username, user.email, user.univ[0].univId)
 				.then(function (datas) {
 					res.send( datas );

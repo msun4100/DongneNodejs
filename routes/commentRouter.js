@@ -10,86 +10,99 @@ var User = require('../db_models/userModel'),
 	Reply = require('../db_models/commentModel').Reply,
 	Board = require('../db_models/boardModel');
 
-router.get('/comments/get', getCommentRoutes);
+router.get('/comments/get/:objectId', getCommentRoutes);
 router.post('/comments/add', addCommentRoutes);
 
 //findById를 쓰면 createFrom... 안하고 그냥 스트링 넣을 수 있음
-//이 함수가 처음엔 해당글(photo나 page 등이 코멘트쓰레드에 해당하는 commentId 를 갖고 있음
-//init.js에서 commentThread 생성해서 그 아이디를 photo나 page가 각각 갖고 있음
-//그래서 _id로 검색하는 것 
-//근데 나는 인풋으로 받은 글넘버랑 코멘트쓰레드 스키마의 boardId랑 비교해서 같으면 보내려 함
-
 function getCommentRoutes(req, res, next) {
-
-//	CommentThread.findOne({
-//		_id : ObjectID.createFromHexString("57591fa5894418fc1d2d2326")
-//	CommentThread.findById({ _id : "575a7b108da2ab341115403e" })
-	CommentThread.findOne({ boarId: 0})
+	var objectIdString = req.params.objectId;
+//	CommentThread.findOne({_id : ObjectID.createFromHexString("57591fa5894418fc1d2d2326")
+//	CommentThread.find({ boardId: 299})
+	CommentThread.findById({ _id : objectIdString })
 	.exec(function(err, comment) {
 		if(err) return next(err);
 		if (!comment) {
 			res.json(404, {
-				msg : 'CommentThread Not Found.'
+				error: true,
+				message : 'CommentThread Not Found.'
 			});
 		} else {
-			res.send({success: 1, msg: 'CommentThread Found.', result: comment});
+			res.send({
+				error: false, 
+				message: 'CommentThread Found.'+comment.replies.length,
+				total: comment.replies.length,
+				result: comment
+			});
 		}
 	});
 };
 
 /*
 --postman 요청시--
-boardId: board.id,
-body: 댓글 내용
 parentCommentId: board.commentId //대댓글의 경우 해당 댓글의 ObjectId
 */
 function addCommentRoutes(req, res, next) {
-//	parentCommentId = req.body.parentCommentId;
-//	Board.findById({ _id: req.body.boardId}).exec(function(err, board){
-	Board.findOne({ boardId: req.body.boardId}).exec(function(err, board){
+	var boardId = req.body.boardId,
+		username = req.body.username,
+		userId = parseInt(req.body.userId),
+		body = req.body.body,
+		parentCommentId = ""+req.body.parentCommentId;
+		
+		
+	Board.findOne({ "boardId": boardId}).exec(function(err, board){
 		if(err) return next(err);
 		if(!board){ 
 			return res.json(200, {
-				msg : 'Board Not Found.'
+				error: false,
+				message : 'BOARD_NOT_FOUND',
 			}); 
 		}
 		//board.commentId가 null인 경우 === 첫 댓글이 작성되어 호출된 경우 === req.body.parentCommentId === board.commentId 가 null 
 		if(board.commentId === null || board.commentId === undefined){
-//			console.log("null||undefined");
+			console.log("null||undefined");
 			var comment = new CommentThread({title: 'title:'+req.body.boardId});
 			comment.save(function(err, comment){
 				board.commentId = comment.id;
 		        board.save(function(err){
 		        	//newComment's info
 		        	var info = {
-//			        		subject: req.body.subject,
-		        			boarId: board.boardId,
+		        			boardId: board.boardId,
 			        		body: req.body.body
 			        };
 //					var newComment = Reply(req.body.newComment); //newComment를 var info{subject, body} 식으러 만들어
 			        var newComment = new Reply(info); 
-					newComment.username = generateRandomUsername();
+//					newComment.username = generateRandomUsername();
 					addComment(req, res, comment, comment, comment._id, newComment);
 //					addComment(req, res, commentThread, currentComment, parentCommentId, newComment);
 //					parentId는 새로 생성한거니까 같은 코멘트쓰레드의 아이디를 넣음
 		        }); //없던 board.comment.id를 추가하고, 코멘트쓰레드를 하나 생성해 댓글을 저장.
 			});			
 		} else {
-//			console.log("이미 board에 commentId가 있는 경우");
+//			console.log("이미 board에 commentId가 있는 경우", board.commentId);
 			CommentThread.findOne({ _id: board.commentId })
-			.exec( function(err, commentThread) {
-				if (!commentThread) {
-						res.json(404, {
-							msg : 'CommentThread Not Found.'
-						});
+			.exec(function(err, commentThread) {
+				var info = {
+						userId: userId,
+						username: username,
+		        		body: body
+		        };
+				if(!commentThread) {
+//						res.json(404, {
+//							msg : 'CommentThread Not Found.'
+//						});
+					var comment = new CommentThread({
+//						_id: ObjectID.createFromHexString(board.commentId),
+						_id: board.commentId,
+						title: 'title:'+board.boardId,
+						boardId: board.boardId});
+					comment.save(function(err, comment){
+						var newComment = new Reply(info);
+//						newComment.username = generateRandomUsername();
+						addComment(req, res, comment, comment, comment._id, newComment);	
+					});
 				} else {
-					var info = {
-//			        		subject: req.body.subject,
-							boardId: board.boardId,
-			        		body: req.body.body
-			        };
 			        var newComment = new Reply(info);
-					newComment.username = generateRandomUsername();
+//					newComment.username = generateRandomUsername();
 					addComment(req, res, commentThread, commentThread, req.body.parentCommentId, newComment);
 				}
 			});			
@@ -98,10 +111,10 @@ function addCommentRoutes(req, res, next) {
 };	
 
 function addComment(req, res, commentThread, currentComment, parentId, newComment) {
-	console.log("parentId:", parentId);
+//	console.log("parentId:", parentId);
 	if(!parentId){
 		//case of undefined
-		return res.json(404, { msg : 'parentId undefined.' });
+		return res.json(404, { error: true, message : 'parentId undefined.' });
 	}
 	if (commentThread.id == parentId) {
 		commentThread.replies.push(newComment);
@@ -123,16 +136,17 @@ function addComment(req, res, commentThread, currentComment, parentId, newCommen
 function updateCommentThread(req, res, commentThread) {
 	CommentThread.update({ _id : commentThread.id }, 
 			{ $set: { replies : commentThread.replies }
-	}).exec(function(err, savedComment) {
+	}).exec(function(err, result) {
 		if (err) {
 			res.json(404, {
-				msg : 'Failed to update CommentThread.'
+				error: true,
+				message : 'Failed to update CommentThread.'
 			});
 		} else {
 			res.json({
-				success: 1,
-				msg : "Update Comment success",
-				result: savedComment
+				error: false,
+				message : " Successfully Comment updated",
+//				result: result //update result보내면 클라이언트 모델이랑 매칭 안됨
 			});
 		}
 	});

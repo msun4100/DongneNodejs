@@ -2,19 +2,19 @@ var mongoose = require('mongoose'),
     Schema = mongoose.Schema;
 var ReplySchema = new Schema();
 ReplySchema.add({
-	username: String,
-	userId: {type: Number, ref: 'User'},
-	timestamp: { type: Date, 'default': Date.now },
-	body: String,
+	username: {type: String, required: true, default: "익명"},
+	userId: {type: Number, ref: 'User', required: true},
+	updatedAt: { type: Date, 'default': Date.now },
+	body: {type: String, required: true},
 	replies:[ReplySchema],
-	likeCount: Number,
-	likes: [{type: Number}]
+	likeCount: {type: Number, default: 0 },
+	likes: [{type: Number, ref: 'User'}]
 });
 var CommentThreadSchema = new Schema({
     title: String,
 //    postId: Schema.Types.ObjectId,
-    boardId: {type: Number, ref: 'Board'},
-    updateAt: { type: Date, 'default': Date.now },
+    boardId: {type: Number, ref: 'Board', required: true},
+    updatedAt: { type: Date, 'default': Date.now },
     replies:[ReplySchema]
 //    replies: [{ type: Schema.Types.ObjectId, ref: 'Reply' }]
 });

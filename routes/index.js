@@ -44,7 +44,8 @@ function registerProcess(req, res, next){
 		User.addUser(info, function(err, profile){
 			if (err) {
 //				return next(err);	//addUser 실패한 경우 === 같은 유저가 있음
-				res.send({error: true, messsage: 'register failure..'});		
+				console.log("index.err1:", err);
+				res.send({error: true, message: 'register failure..'});		
 				return; 
 			}else{
 				req.login(profile, function(err){
@@ -56,17 +57,20 @@ function registerProcess(req, res, next){
 							sns: profile.sns,
 							temp: profile.temp,
 							pic: profile.pic,
-							username: profile.usernmae,
+							username: profile.username,
 							email: profile.email,
 							user_id: profile.userId
 					}
-					res.send({error: false, messsage: 'register complete'}); //클라이언트는 에러false리턴받으면 바로 로그인url요청
-//					res.send({error: false, messsage: 'register complete', user: newUser});
+					console.log("index.success: newUser", newUser);
+//					res.send({error: false, messsage: 'register complete'}); 
+					//클라이언트는 에러false리턴받으면 바로 로그인url요청, 아니다 userId보내줘야함.
+					res.send({error: false, messsage: 'register complete', user: newUser});
 				});
 			}
 		});
 	}else{
 		//flash: please fill out all the field.
+		console.log("index.err2:", err);
 		res.send({error: true, messsage: 'register failure'});
 	}
 };

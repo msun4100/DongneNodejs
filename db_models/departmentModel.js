@@ -6,7 +6,7 @@ autoIncrement.initialize(connection);
 
 var DepartmentSchema = Schema({
 	deptId: {type: Number, unique: true},
-	univId: {type: Number, ref: 'University'},
+	univId: {type: Number, ref: 'University', required: true},
 	deptname: {type: String, required: true},
 	createdAt: {type: Date, default: Date.now},
 	updatedAt: {type: Date, default: Date.now},

@@ -4,8 +4,8 @@ var connection = require('./mongodbConfig');
 
 var FriendSchema = Schema({
 	//ofObjectId: [Schema.Types.ObjectId],
-	from: {type: Number, ref: 'User'},
-	to: {type: Number, ref: 'User'},
+	from: {type: Number, ref: 'User', required: true},
+	to: {type: Number, ref: 'User', required: true},
 	status: {type: Number, default: 0},	//pending:0, accepted:1, declined:2, blocked:3 
 	actionUser: {type: Number, default: 0},	
 	updatedAt: {type: Date, default: Date.now}

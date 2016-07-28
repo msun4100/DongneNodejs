@@ -26,6 +26,7 @@ var createUser = function(user_id, name, email, univId){
 						input = [name, email];
 						sql = 'INSERT INTO USERS(name, email) VALUES(?, ?)';
 					} else {
+						//my-sql auto_increment 사용시 user_id가 0이면 안들어감. 오토넘버가 생성되서 저장됨.
 						input = [user_id, name, email];
 						sql = 'INSERT INTO USERS(user_id, name, email) VALUES(?, ?, ?)';	
 					}
