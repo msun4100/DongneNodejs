@@ -33,22 +33,6 @@ var initialDB = fs.readFileSync('./initialDB.json');
 var movieList = JSON.parse(initialDB);
 
 //====================================
-var rabbitPromise = require('../queue/rabbit');
-var exchange = require('../queue');
-router.get('/push', function(req, res, next){
-	rabbitPromise.done(function(rabbit) {
-		rabbit.queue('', {exclusive: true, autoDelete: true}, function(q){
-			q.bind(config.rabbitMQ.exchange, q.name);
-		    rabbit.publish('gcm_push', {card: 'details'}, {replyTo: q.name});
-		    q.subscribe(function(message){
-		    	console.log("워커에서보낸 메시지:", message);
-		        q.destroy();
-		        q.close();
-		        res.send('Charged! Thanks!');
-		    });
-		});	
-	});
-});
 
 /*
 '/' 페이지 파일 올려서 서브밋하면 updatePic post 실행됨

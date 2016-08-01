@@ -1,4 +1,5 @@
 var config = {
+	host: 'http://localhost:3000',
 	port: 3000,
 	secret: 'secret',
 	redisPort: 6379,
@@ -15,7 +16,6 @@ var config = {
 		googleAuth: '/auth/google',
 		googleAuthCallback: '/auth/google/callback'
 	},
-	host: 'http://localhost:3000',
 	facebook: {
 		appID: '238242993213999',
 		appSecret: '2c1d2b181222dd8221c6501213e15ace',
@@ -41,6 +41,15 @@ var config = {
 		url: 'localhost',
 		poolSize: 1
 	},
+	mysql: {
+//		connectionLimit: 250,
+		host: '127.0.0.1',
+		user: 'root',	// root
+		password: '',	// 1119
+		port: 3306,
+		multipleStatements : true,
+		database: 'gcm_chat'
+	},
 	board: {
 		pageSize: 10	//board list paging size
 	},
@@ -59,6 +68,14 @@ var config = {
 //		apiKey: "AIzaSyDT49gnPm5mECM-JO0avOZZc06ErKYboDI",
 		PUSH_FLAG_CHATROOM: 1,
 		PUSH_FLAG_USER: 2
+	},
+	im: {
+	    largePath: "/uploads/fullsize/",
+	    thumbPath: "/uploads/thumbs/",
+		largeImgName: "user_:userId_large",
+		smallImgName: "user_:userId_small",
+	    small: { width: 120, height: 120},
+	    large: { width: 348, height: 348},
 	}
 };
 

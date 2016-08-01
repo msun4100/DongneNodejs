@@ -66,16 +66,22 @@ function getDistance(lat1, lon1, lat2, lon2) {
 }
 
 
-//http://map.naver.com/?dlevel=12&pinType=site&pinId=13543575&x=126.7745364&y=37.7661170&enc=b64
-//var lat1=37.7661170, lon1 =126.7745364;	//금촌역	
-//var lat2=37.4519850, lon2 =126.6579650;	//인하대 후문
-//http://map.naver.com/?dlevel=12&pinType=site&pinId=13407096&x=126.778725&y=37.76705&enc=b64 금촌 농협
-//var lat2=37.76705, lon2 =126.778725;
+//금촌역 lat1=37.7661170, lon1 =126.7745364;	//금촌역	
+//인하대 후문 lat2=37.4519850, lon2 =126.6579650;	//인하대 후문
+//신촌역x=126.936846&y=37.5552192&enc=b64
+//홍대입구x=126.9271257&y=37.5573934&enc=b64
+//부산역x=129.0393302&y=35.1144951&enc=b64
+//var location = [{lat:"37.7661170", lon:"126.7745364"},
+//              {lat:"37.4519850", lon:"126.6579650"},
+//              {lat:"37.5552192", lon:"126.936846"},
+//              {lat:"37.5573934", lon:"126.9271257"},
+//              {lat:"35.1144951", lon:"129.0393302"}]; //문자열로 넣어도 넘버로 자동컨버팅 되는 듯
 
 //console.log(distance(lat1, lon1, lat2, lon2, "M"));
 //console.log(distance(lat1, lon1, lat2, lon2, "K").toFixed(1));
 //console.log(distance(lat1, lon1, lat2, lon2, "m"));
 //console.log(getDistance(lat1, lon1, lat2, lon2));
+//console.log(getDistance("37.5552192", "126.936846", "35.1144951", "129.0393302"));
 
 module.exports = function () {
 	return{

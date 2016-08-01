@@ -107,7 +107,7 @@ router.post('/list/:univId/:tab', function(req, res, next) {
 		query.exec(function(err, count){
 			if(err) callback(err, null);
 			if(count === 0) {
-				console.log("count is zero");
+				console.log("board_count_is_zero");
 				console.timeEnd('TIMER-mycount');
 				callback(new Error('HAS_NO_BOARD_ITEM'), null);
 			} else {
@@ -213,6 +213,32 @@ router.get('/write300', function(req, res, next) {
 	}
 	res.send({msg:" 저장 성공"});
 });
+// url /board/:boardId
+router.get('/:boardId', function(req, res, next) {
+	var boardId = req.params.boardId;
+	Board.update( {"boardId": boardId}, {"$inc": {"viewCount": 1}}, function (err, doc) {
+		if (err) return next(err);
+		Board.find({"boardId": boardId},{__v: 0}, function (err, docs) {
+			if(err) return next(err);
+			if(docs.length !== 1) return res.send({error: false, message: 'DOCS_LENGTH_ERROR'});
+			
+			var query = CommentThread.find();
+			query.and([ {_id: docs[0].commentId}]);
+			query.select({__v:0, title:0});
+			query.sort({ "_id": -1});
+			query.exec(function(err, comment){
+				if(err) return next(err);
+				res.send({
+					error: false,
+					message: 'univ:'+ docs[0].univId + ', Board: ' + docs[0].boardId,
+					result: docs,
+					comment: comment
+				});
+			});
+		});
+	});
+	
+});
 
 router.get('/read/:page/:boardId', function (req, res, next) {
 	//현재 구조상 req.params.page#은 아무거나 넣어도상관없음.
@@ -227,7 +253,6 @@ router.get('/read/:page/:boardId', function (req, res, next) {
 			res.send({success:1, msg:'read board', result: docs[0]});
 		});
 	});
-
 });
 
 

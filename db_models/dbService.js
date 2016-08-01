@@ -7,18 +7,24 @@ Grid.mongo = mongoose.mongo;
 
 var gfs;
 
+//writeFileToDb호출할때 objectId를 호출할때 지정해줌.
+//1. 유저디비 검색해서 이미 pic에 오브젝트 아이디가 있으면 그 오브젝트 아이디를 사용하게 하고
+//2. 없으면 새로운 오브젝트 아이디를 생성.
+
 var writeFileToDb = function (config) {
 	return new Promise(function (resolve,reject) {
-		var objectId = ObjectId();
+//		var objectId = ObjectId();
 		var readStream = config.readStream;
 		var writeStream = gfs.createWriteStream({
-			_id:objectId,
-			filename:config.fileName,
-			root:config.collection	//photos
+//			_id:objectId,
+			_id: config.objectId,
+			filename: config.fileName,
+			root:config.collection,	//photos
+			uploadDate: Date.now
 		});
 		readStream.pipe(writeStream);
 		writeStream.on('close',function () {
-			resolve(objectId);
+			resolve(config.objectId);
 		});
 		writeStream.on('error',function (error) {
 			reject(error);

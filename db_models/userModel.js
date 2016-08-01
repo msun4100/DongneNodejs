@@ -20,7 +20,11 @@ var UserSchema = Schema({
 	job: { name:{type: String, default: ""}, team: {type: String, default: ""} },
 	desc: [ String ],
 	sns: [ String ],
-	pic: String,
+	pic: {
+		small:{type: String, default: ""},
+//		medium:{type: String, default: ""},
+		large:{type: String, default: ""},
+	},
 	createdAt: { type: Date, default: Date.now },
 	updatedAt: { type: Date, default: Date.now },
 	salt: {type: String},
@@ -186,7 +190,7 @@ function createUser(i){
 				job: { team: "jobteam"+ i, name: "jobname"+i},
 				desc: [],
 				sns: [],
-				pic: "",
+				pic: {small: "", large: ""},
 				salt: salt,	//생성된
 				work: config.crypto.workFactor,
 				provider: "local",

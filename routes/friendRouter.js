@@ -239,7 +239,8 @@ function postUnivUsers(req, res, next) {
 	        function(callback) {
 	        	//전체 대학교 유저리스트
 	        	console.time('TIMER');	//실행시간 체크 스타트
-	        	User.find({"univ.univId": univId, "updatedAt": {"$lt": reqDate}}, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+//	        	User.find({"univ.univId": univId, "updatedAt": {"$lte": reqDate}}, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+	        	User.find({"univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 })
 	        	.sort({username: 1})
 	        	.skip(start * display)
 	        	.limit(display).exec(function(err, users){
@@ -334,7 +335,7 @@ function postMyFriends(req, res, next) {
 		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ]);
 		query.exec(function(err, count){
 			if(err) callback(err, null);
-			if(count === 0) { console.log("count is zero");}
+			if(count === 0) { console.log("postMyFriends_count_is_zero");}
 			console.timeEnd('TIMER-mycount');
 			callback(null, count);
 		});

@@ -35,7 +35,7 @@ function registerProcess(req, res, next){
 				job: req.body.job,
 				desc:[],
 				sns:[],
-				pic: "",
+				pic: {small: "", large: ""},
 //				salt:
 				work: config.crypto.workFactor,
 				provider: 'local',
