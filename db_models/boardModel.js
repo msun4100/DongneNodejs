@@ -21,7 +21,7 @@ var BoardSchema = new Schema({
     updatedAt: { type: Date, "default": Date.now },
     commentId: { type: Schema.Types.ObjectId, ref: 'CommentThread'},
     user: { 
-    	pic: {type: String, default:""}, 
+    	pic: {small: {type: String, default: ""}, large: {type: String, default: ""}}, 
     	username: {type: String, default: "name"}, 
     	enterYear: {type: Number, default: 2000},
     	deptname: {type: String, default: "deptname"}

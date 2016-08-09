@@ -159,12 +159,11 @@ var routes = function routes(app){
 			 * in the newly registered user.
 			*/			 
 			req.login(user, function(err) {
-				//req.login --> 전달된 loginInfo를 세션에 저장
 				if(err) { 
 					console.log('req.login() Error!');
 					return next(err); 
 				}
-				console.log("req.login() user:", user);
+//				console.log("req.login() user:", user);
 				
 				dbHandler.createUser(user.userId, user.username, user.email, user.univ[0].univId)
 				.then(function (datas) {
@@ -178,7 +177,7 @@ var routes = function routes(app){
 						message:"Oops! An error occurred while registereing"
 					});
 				}).finally(function () {
-					console.log('finally functions');
+//					console.log('finally functions');
 				});
 				//=================
 //				console.log("req.user: ", req.user);

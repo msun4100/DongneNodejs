@@ -12,31 +12,6 @@ var User = require('../db_models/userModel'),
 	Board = require('../db_models/boardModel'),
 	Main = require('../db_models/pageModel');
 
-
-router.post('/write', function(req, res, next) {
-	console.log('req.session.pageId: ', req.session.pageId);
-//	일단 pageId도 univId로 똑같이 대체
-	var info = {
-			univId: req.body.univId,
-			writer: req.body.writer,
-			pageId: req.body.pageId,
-			type: req.body.type,
-			title: req.body.title,
-			body: req.body.body,
-//			viewCount: 0,
-//			likeCount: 0,
-			likes: [],
-			commentId: ObjectID()	//mongoDB여러대 쓸때 이렇게 하면 안된다던데 나중에 수정하자.
-		};
-	var board = new Board(info);
-	board.save(function(err, doc) {
-		if (err) return next(err);
-		console.log("saved doc: ", doc);
-		res.send({ error: false, message:'board saved', result: doc});
-	});		
-			
-});
-
 router.get('/list', function (req, res, next) {
 //  res.redirect('/list/1');
 	req.url = "/list/1";
@@ -97,13 +72,13 @@ router.post('/list/:univId/:tab', function(req, res, next) {
 	}
 	if(typeArr === null || typeArr === undefined) return next(new Error('TYPE_ARR_UNDEFINED_ERROR'));
 //	var user = req.user;
-	console.log(req.body);
+//	console.log("list/:univId/:tab", req.body);
 	async.waterfall([ function(callback){ 
 		//total리턴을 위한 카운트 연산. count()콜백안에 async를 넣어도 되지만 가독성이 떨어져서 async 첫 번째 콜에 둠.
 		console.time('TIMER-mycount');
 		var query = Board.count();
-//		query.and([ {"univId": univId}, {"$or":[{"type": type1}, {"type": type2}]}, {"updatedAt": {"$gt": reqDate}} ]);
-		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
+//		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
+		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
 		query.exec(function(err, count){
 			if(err) callback(err, null);
 			if(count === 0) {
@@ -118,7 +93,8 @@ router.post('/list/:univId/:tab', function(req, res, next) {
 		});
 	}, function(count, callback){
 		var query = Board.find();
-		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
+//		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
+		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
 		query.select({__v:0});
 		query.sort({ "_id": -1});
 		query.skip(start * display);
@@ -174,6 +150,60 @@ router.post('/list/:univId/:tab', function(req, res, next) {
 		
 	});	
 });
+
+router.post('/write', function(req, res, next) {
+//	console.log('req.session.pageId: ', req.session.pageId);
+//	일단 pageId도 univId로 똑같이 대체
+	console.log("req.body", req.body);
+	if(req.body.univId === undefined || req.body.writer === undefined || req.body.pageId === undefined ||
+			req.body.type === undefined || req.body.title === undefined || req.body.body === undefined){
+		return next(new Error('board args undefined error'));
+	} 
+	var type = "";
+	async.waterfall([ function(callback){
+		User.find({ userId : req.body.writer }, function(err, users) {
+			var newUser = {
+				username : users[0].username,
+				deptname : users[0].univ[0].deptname,
+				enterYear : users[0].univ[0].enterYear,
+				pic : users[0].pic
+			};
+			type += ""+users[0].univ[0].isGraduate;
+			type = type +""+req.body.type;
+			console.log("write type", type);
+			var info = {
+				univId : req.body.univId,
+				writer : req.body.writer,
+				pageId : req.body.univId,
+				type : type,
+				title : req.body.title,
+				body : req.body.body,
+				likes : [],
+				commentId : ObjectID(),
+				user : newUser
+			};
+			callback(null,info);
+		});
+	}, function(info, callback){
+		var board = new Board(info);
+		board.save(function(err, doc) {
+			if(err) callback(err, null);
+			else callback(null, doc);
+		});
+	}], function(err, doc){
+		if(err){return next(err);}
+		console.log("savedItem:", doc);
+		res.send({
+			error: false,
+			message: "saved "+doc.boardId,
+			result: doc
+		});
+		
+	});
+			
+});
+
+
 
 router.get('/write300', function(req, res, next) {
 	var typeArr = [ "00", "01", "10", "11" ];
@@ -330,7 +360,6 @@ router.post('/dislike', function (req, res, next) {
 					"$pull": {"likes": userId},
 					"$set": {"updatedAt": Date.now()}
 				}, function (err, doc) {
-					console.log(doc);
 			if (err) return next(err);
 			if (doc.n == 1){
 				res.send({error: false, message: 'dislike inc complete'});
@@ -339,7 +368,7 @@ router.post('/dislike', function (req, res, next) {
 			}
 		});
 	} else {
-		res.send({success:0, msg: 'args undefined', result: null});
+		res.send({error: true, message: 'args undefined'});
 	}
 });
 

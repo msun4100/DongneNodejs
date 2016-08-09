@@ -12,7 +12,7 @@ var createUser = function(user_id, name, email, univId){
 		isUserExists(email, function(err, isExists) {
 			if(err) reject(err);
 			if(!isExists){
-				console.log("1-->",isExists);
+//				console.log("1-->",isExists);
 				pool.getConnection(function (err, conn) {      
 					if (err) {
 						console.log('error', err);
@@ -58,7 +58,7 @@ var createUser = function(user_id, name, email, univId){
 				    });
 				});	
 			} else {
-				console.log("2-->", isExists);
+//				console.log("2-->", isExists);
 				getUserByEmail(email, function(err, user){
 					if(err) {console.log('error', err); return reject(err);}
 		    		var datas = {

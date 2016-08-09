@@ -17,10 +17,11 @@ var writeFileToDb = function (config) {
 		var readStream = config.readStream;
 		var writeStream = gfs.createWriteStream({
 //			_id:objectId,
+//			mode: 'w',
 			_id: config.objectId,
 			filename: config.fileName,
 			root:config.collection,	//photos
-			uploadDate: Date.now
+			uploadDate: config.uploadDate
 		});
 		readStream.pipe(writeStream);
 		writeStream.on('close',function () {

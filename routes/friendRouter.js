@@ -10,11 +10,11 @@ var gpsProvider = require('../gpsProvider')();
 
 
 //router.post('/friends/:friend', addFriends); //deprecated
-router.get('/friends/:status', [mUtil.requireAuthentication], showFriends);
-router.post('/friends/:status', [mUtil.requireAuthentication], updateFriends);
-router.get('/friends/univ/:univId', [mUtil.requireAuthentication], showUnivUsers);
-router.post('/friends/univ/:univId', [mUtil.requireAuthentication], postUnivUsers);
-router.post('/friends/univ/:univId/my', [mUtil.requireAuthentication], postMyFriends);
+router.get('/friends/:status', showFriends);
+router.post('/friends/:status', updateFriends);
+router.get('/friends/univ/:univId', showUnivUsers);
+router.post('/friends/univ/:univId', postUnivUsers);
+router.post('/friends/univ/:univId/my', postMyFriends);
 router.post('/friends/test/reqdate', function(req,res,next){
 	var univId = 1;
 	var start = parseInt(req.body.start);
@@ -23,7 +23,7 @@ router.post('/friends/test/reqdate', function(req,res,next){
 	console.log(req.body);
 //	4990번째 유저보다 늦게 가입한 친구들 찾기 --> 9명 검색 됨 4991~ 4999
 //	userId: 4990의 updatedAt --> 2016-07-21T09:01:51.564Z
-	User.find({"updatedAt": {"$gt": '2016-07-21T09:01:51.564Z'}}, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+	User.find({"updatedAt": {"$gt": '2016-07-21T09:01:51.564Z'}}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
 	.sort({username: 1})
 	.skip(start * display)
 	.limit(display).exec(function(err, users){
@@ -168,7 +168,7 @@ function showUnivUsers(req, res, next) {
 	        function (callback) {
 	        	//전체 대학교 유저리스트
 	        	console.time('TIMER');	//실행시간 체크 스타트
-	        	User.find({"univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+	        	User.find({"univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
 	        	.sort({username: 1}).limit(30).exec(function(err, users){
 	        		if(err) callback(err, null);
 	        		else callback(null, users);
@@ -232,37 +232,35 @@ function postUnivUsers(req, res, next) {
 	var display = parseInt(req.body.display);
 	var reqDate = req.body.reqDate;
 	var user = req.user;
-	console.log(req.body);
+	console.log("/friends/univ/:univId", req.body);
 	
 	var total = 0;
 	async.waterfall([
 	        function(callback) {
 	        	//전체 대학교 유저리스트
+//	        	"likes":{"$ne": userId}
 	        	console.time('TIMER');	//실행시간 체크 스타트
-//	        	User.find({"univ.univId": univId, "updatedAt": {"$lte": reqDate}}, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 })
-	        	User.find({"univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+//	        	User.find({"univ.univId": univId, "updatedAt": {"$lte": reqDate}}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+	        	console.time('TIMER-ne');
+	        	User.find({"userId": {"$ne": user.userId}, "univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
 	        	.sort({username: 1})
 	        	.skip(start * display)
 	        	.limit(display).exec(function(err, users){
+	        		console.timeEnd('TIMER-ne');
 	        		if(err) callback(err, null);
 	        		else callback(null, users);
 	        	});
 	        },
 	        function(users, callback){
-//	        	console.time('TIMER-COUNT');
-//	        	User.find({"univ.univId": univId}, function(err, docs){
-//	        		if(err) callback(err, null);
-//	        		total = docs.length;
-//	        		console.log("total:", total);
-//	        		console.timeEnd('TIMER-COUNT');
-//	        		callback(null, users);
-//	        	});
-	        	//find로 할때랑 count로 할때랑 1초 이상 가량의 속도차이가 남. users.length가 5000 일때
 	        	console.time('TIMER-COUNT');
+	        	//count 쿼리에 위에서 전체 유저 쿼리 하듯이 
+	        	//"userId": {"$ne": user.userId} <-- 이조건을 넣으면 기존 total-1 카운트를 찾을 수 있지만.
+	        	//컨솔로 찍어보는 TIMER-COUNT가 3ms~5ms 나오던 것이 5~7ms 로 늘어남.
+	        	//조건 추가한 것 때문에 근사한 차이를 보이는 듯함. 그래서 그냥 count-1 리턴 하기로.
 	        	User.count({"univ.univId": univId}, function(err, count){
 	        		if(err) callback(err, null);
-	        		total = count;
-	        		console.log("total:", count);
+	        		total = count-1;
+	        		console.log("total:", total);
 	        		console.timeEnd('TIMER-COUNT');
 	        		callback(null, users);
 	        	});
@@ -309,14 +307,20 @@ function postUnivUsers(req, res, next) {
 			function (err, list) { 
 				if(err) { res.send({ error: true, message: err.message}); }
 				else{
-					console.timeEnd('TIMER');
-					res.send({
-						error : false,
-						total : total,
-						message : 'univ all friends total:'+list.length,
-						result : list
+					User.find({userId: user.userId}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 }, function(err, users){
+						console.timeEnd('TIMER');
+						if(err) { res.send({ error: true, message: err.message}); }
+						else {
+							res.send({
+								error : false,
+								total : total,
+								message : 'univ all friends total:'+list.length,
+								result : list,
+								user: users[0]
+							});		
+						}
 					});
-				} 
+				} //else
 			});
 }
 
@@ -344,7 +348,7 @@ function postMyFriends(req, res, next) {
 		var query = Friend.find();
 		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ])
 		query.select({_id:0});
-		query.sort({ username: 1});
+//		query.sort({ username: 1});
 		query.skip(start * display);
 	 	query.limit(display);
 		query.exec().then(function fulfilled(results) {
@@ -356,11 +360,13 @@ function postMyFriends(req, res, next) {
 					ids.push(results[i].from);	
 				}
 			}
-			User.find({ "userId": {$in: ids} }, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 }, function(err, users){
+			User.find({ "userId": {$in: ids} }, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 },
+					{"sort": {username:1}}, function(err, users){
 				if(users.length !== 0){
 					for (i = 0; i < ids.length; i++) {
 						users[i].isFriend = true;
 					}
+					console.log("myFriends Total:", count);
 					fetchDistance(user.location, users, function(err, list) {
 						if (err) return next(err);
 						res.send({
@@ -411,7 +417,7 @@ function showFriends(req, res, next){
 					ids.push(results[i].from);	
 				}
 			}
-			User.find({ "userId":{$in: ids} }, {_id:0, password:0, salt:0, work:0, updatedAt:0, createdAt:0, __v:0, "univ._id":0 },function(err, users){
+			User.find({ "userId":{$in: ids} }, {_id:0, password:0, salt:0, work:0, createdAt:0, __v:0, "univ._id":0 },function(err, users){
 				if(users.length != 0){
 					fetchDistance(user.location, users, function(err, list){
 						if(err) return next(err);
@@ -489,7 +495,7 @@ function showFriends(req, res, next){
 					ids.push(results[i].from);	
 				}
 			}
-			User.find({ "userId": {$in: ids} }, { _id: 0, password: 0, salt: 0, work: 0, updatedAt: 0, createdAt: 0, __v: 0, "univ._id": 0 }, function(err, users){
+			User.find({ "userId": {$in: ids} }, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 }, function(err, users){
 				if(users.length !== 0){
 					for(i=0; i < ids.length; i++){
 						users[i].isFriend = true;

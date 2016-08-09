@@ -8,6 +8,7 @@ var TimeStamp = require('../gcm/timeStamp');
 var config = require('../config');
 var async = require('async');
 var request = require('request');
+var mUtil = require('../middleware/utilities');
 
 router.post('/user/login', function(req, res, next){
 	/* 
@@ -48,6 +49,7 @@ router.put('/user/:id', function(req, res, next){
 	var regId = req.body.gcm_registration_id;
 	dbHandler.updateGcmID(user_id, regId)
 	.then(function (datas) {
+//		console.log("datas:", datas);
 		res.send(datas);
 	},function (error) {
 		console.log('updateGcmID Error:', error);
@@ -74,7 +76,7 @@ router.get('/chat_rooms', function(req, res, next){
 		});
 	});	
 });
-router.post('/chat_rooms', function(req, res, next){
+router.post('/chat_rooms', [mUtil.requireAuthentication], function(req, res, next){
 	/* 
 	 * Fetches request chat roomList
 	 * params: roomList

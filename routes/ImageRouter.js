@@ -23,9 +23,15 @@ var uploadDir = __dirname + '/uploads',
 	imageDir = __dirname + '/images';
 
 router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),function (req,res,next) {
+	
 	console.log("req.file:", req.file);
-//	console.log("req.body", req.body);
+	console.log("req.body", req.body);
+//	console.log("Date.now", Date.now);	//function now() { [native code] }
+//	console.log("Date.now()", Date.now());//1470034177845
+	//reqDate로 심플데이터포맷 스트링 받아야함.
+	
 	var userId = req.params.userId;
+	var reqDate = req.body.reqDate;
 	User.find({userId: userId}, function(err, users){
 		if(err) return next(err);
 		if(users.length !== 1) return res.send({error: true, message: "user_length_error"});
@@ -51,7 +57,8 @@ router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),fun
 			objectId: largeObjId,
 			readStream: fs.createReadStream(req.file.path),
 			fileName: largeImgName,
-			collection:'photos'
+			collection:'photos',
+			uploadDate: reqDate
 		}).then(function(mObjectId) { //objectId == largeId
 			var mLargeId = mObjectId; //리턴된 obj아이디는 위에서 if/else로 지정한 objId와 같음
 			var width = config.im.small.width,
@@ -69,10 +76,11 @@ router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),fun
 					objectId: smallObjId,
 					readStream: fs.createReadStream(thumbPath),
 					fileName: smallImgName,
-					collection:'photos'			
+					collection:'photos',
+					uploadDate: reqDate
 				}).then(function(smallId){
 					console.log("samllId:", smallId);
-					User.update({"userId": userId}, { "$set": {"pic.small": smallId, "pic.large": mLargeId}}, function(err, doc){
+					User.update({"userId": userId}, { "$set": {"pic.small": smallId, "pic.large": mLargeId, "updatedAt": Date.now()}}, function(err, doc){
 						if(err) { return next(err); }
 						if(doc.n === 1){
 							res.send({ error: false, message: "userId: "+ userId, result: ""+smallId });
@@ -101,24 +109,40 @@ router.get('/getPic/:userId/:size',function (req, res, next) {
 		if(size.toLowerCase() === "small") pic = docs[0].pic.small;
 		else pic = docs[0].pic.large;
 		if(pic === "" || pic === undefined){
-			return res.send({error: true, message: "empty thumbnail"});
-		}
-		dbService.readFileFromDb({
-			objectId: pic,
-			writeStream: res,
-			collection:'photos'
-		})//configurations
-		.then(function (objectId) {
-			res.end();
-		},function (error) {
-			res.send({
-				error: true,
-				message: error.message
-			});
-		});	
+			getDefaultImg(req, res, "empty thumbnail");
+//			return res.send({error: true, message: "empty thumbnail"});
+		} else {
+			dbService.readFileFromDb({
+				objectId: pic,
+				writeStream: res,
+				collection:'photos'
+			})//configurations
+			.then(function (objectId) {
+				res.end();
+			},function (error) {
+//				res.send({ error: true, message: error.message });
+				getDefaultImg(req, res, error.message);
+			});				
+		}//else
 	}, function(err){
-		res.status(500).send({ error: true, message: 'User not found error' });
+		getDefaultImg(req, res, 'User not found error');
+//		res.status(500).send({ error: true, message: 'User not found error' });
 	});
 });
+
+function getDefaultImg(req, res, msg){
+    var path = __dirname + "/images/icon.png"; // 
+    fs.access(path, function(err) {
+       if ( err ) {
+    	   console.log("getDefaultImg func error occurred");
+    	   res.statusCode = 404;
+    	   res.end('Not Found');
+    	   return;
+       }
+       console.log("getDefaultImg: " + msg);
+       var is = fs.createReadStream(path);
+       is.pipe(res);
+    });
+}
 
 module.exports = router;

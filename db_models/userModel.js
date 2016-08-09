@@ -19,7 +19,7 @@ var UserSchema = Schema({
 	univ: [{univId:{type: Number, ref: 'University'}, deptId:{type: Number, ref: 'Department'}, deptname:{type: String, default: "학교사람들"}, enterYear:{type: Number, default: 2016}, isGraduate:{ type: Number, default: 0 }}],
 	job: { name:{type: String, default: ""}, team: {type: String, default: ""} },
 	desc: [ String ],
-	sns: [ String ],
+	sns: [ { sns:{type: String, default: ""}, url: {type: String, default: ""} } ],
 	pic: {
 		small:{type: String, default: ""},
 //		medium:{type: String, default: ""},
@@ -189,7 +189,7 @@ function createUser(i){
 				univ: [{univId: doc[0].univId, deptId: doc[0].deptId, deptname: doc[0].deptname, enterYear: year[Math.floor(Math.random()* 9)], isGraduate: Math.floor(Math.random()* 2)}],
 				job: { team: "jobteam"+ i, name: "jobname"+i},
 				desc: [],
-				sns: [],
+				sns: [{sns:"fb", url:"fb_url....."}],
 				pic: {small: "", large: ""},
 				salt: salt,	//생성된
 				work: config.crypto.workFactor,

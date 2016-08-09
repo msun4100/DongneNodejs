@@ -61,7 +61,6 @@ app.use(require('./routes/migrationRouter'));	//testing for PHP Server migration
 app.use(require('./routes/univRouter'));	
 app.use(require('./routes/deptRouter'));	
 app.use(require('./routes/imageRouter'));	//for image upload tests
-//app.use(require('./routes/boardRouter'));	//  /xxx로 바로 접속
 app.use(require('./routes/friendRouter'));
 app.use(require('./routes/commentRouter'));
 
