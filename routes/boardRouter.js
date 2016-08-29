@@ -18,6 +18,7 @@ router.get('/list', function (req, res, next) {
 	router.handle(req, res, next);
 });
 
+
 router.get('/list/:page', function(req, res, next) {
 	var page = req.params.page;
 	page = parseInt(page, 10);
