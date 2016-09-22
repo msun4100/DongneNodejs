@@ -5,6 +5,7 @@ ReplySchema.add({
 	username: {type: String, required: true, default: "익명"},
 	userId: {type: Number, ref: 'User', required: true},
 	updatedAt: { type: Date, 'default': Date.now },
+	type: {type: String, "default": "01"},	//00:재학생/비공개, 01:재학생/공개, 10:졸업생/비공해, 11:졸업생/공개
 	body: {type: String, required: true},
 	replies:[ReplySchema],
 	likeCount: {type: Number, default: 0 },

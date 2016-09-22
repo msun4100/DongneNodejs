@@ -6,9 +6,11 @@ var FriendSchema = Schema({
 	//ofObjectId: [Schema.Types.ObjectId],
 	from: {type: Number, ref: 'User', required: true},
 	to: {type: Number, ref: 'User', required: true},
-	status: {type: Number, default: 0},	//pending:0, accepted:1, declined:2, blocked:3 
+	//cancel: -1(요청취소 또는 친구리스트에서 아무 관계가 아님을 표시하는 값), pending:0, accepted:1, declined:2, blocked:3
+	status: {type: Number, default: 0},	 
 	actionUser: {type: Number, default: 0},	
-	updatedAt: {type: Date, default: Date.now}
+	updatedAt: {type: Date, default: Date.now},
+	msg: {type: String, default: ""}
 });
 
 

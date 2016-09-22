@@ -67,7 +67,15 @@ var config = {
 		apiKey: "AIzaSyBMjOPg1TvJd6r-rWfi56qWkB3LOpvtXbo",
 //		apiKey: "AIzaSyDT49gnPm5mECM-JO0avOZZc06ErKYboDI",
 		PUSH_FLAG_CHATROOM: 1,
-		PUSH_FLAG_USER: 2
+		PUSH_FLAG_USER: 2,
+		PUSH_FLAG_NEW_ROOM: 3,
+		PUSH_FLAG_NOTIFICATION: 4,
+		MSG_PUSH_LIKE: "님이 회원님의 게시글을 좋아합니다.",
+		MSG_PUSH_REPLY: "님이 회원님의 게시글에 댓글을 남겼습니다.",
+		MSG_PUSH_REPLY_ANONYMOUS: "누군가 회원님의 게시글에 댓글을 남겼습니다.",
+		MSG_PUSH_CONFIRM: "님이 회원님의 친구 신청을 수락하였습니다.",
+		MSG_PUSH_RECEIVE: "님의 친구신청이 도착하였습니다.",
+		MSG_PUSH_NOTICE: "공지사항이 있습니다."
 	},
 	im: {
 	    largePath: "/uploads/fullsize/",

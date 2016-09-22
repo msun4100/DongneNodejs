@@ -60,11 +60,17 @@ router.put('/user/:id', function(req, res, next){
 	});
 	
 });
+//used at GcmChatFragment
 router.get('/chat_rooms', function(req, res, next){
 	/* 
 	 * Fetches all chat rooms
 	 * params: -
+	 * 
+	 * var datas = {
+		error: false,
+		chat_rooms: rooms };
 	*/
+
 	dbHandler.getAllChatRooms()
 	.then(function (datas) {
 		res.send(datas);
@@ -76,6 +82,8 @@ router.get('/chat_rooms', function(req, res, next){
 		});
 	});	
 });
+
+//지금은 안씀
 router.post('/chat_rooms', [mUtil.requireAuthentication], function(req, res, next){
 	/* 
 	 * Fetches request chat roomList
@@ -104,6 +112,8 @@ router.post('/chat_rooms', [mUtil.requireAuthentication], function(req, res, nex
 		});
 	}
 });
+
+//used at GcmChatFragment
 router.get('/chat_rooms/:id', function(req, res, next){
 	/* 
 	 * Fetches single chat room messages
@@ -112,11 +122,12 @@ router.get('/chat_rooms/:id', function(req, res, next){
 	var chat_room_id = req.params.id;
 	dbHandler.getChatRoomMsg(chat_room_id)
 	.then(function (datas) {
+//		console.log("/chat_rooms/:id",datas);
 		res.send(datas);
 	},function (error) {
 		res.send({
-			error:true, 
-			message:"Failed to getChatRoom Messages"
+			error: true, 
+			message: "Failed to getChatRoom Messages"
 		});
 	});
 });
@@ -147,6 +158,13 @@ router.post('/chat_rooms/:id/message', function(req, res, next){
 	var user_id = req.body.user_id;
 	var message = req.body.message;
 	
+	//for requests
+	var pushType = req.body.pushType;
+	var to = req.body.to;	//addChatRoom으로 부터 오는 req.body.to (배열 변환되서 옴)
+	if(!(to instanceof Array)){
+		to = [to];
+	}
+	console.log("to", to);
 	//callback hell.. apply to 'async proccess'
 	
 	dbHandler.addMessage(user_id, chat_room_id, message)
@@ -155,52 +173,91 @@ router.post('/chat_rooms/:id/message', function(req, res, next){
 		//gcm push 하고 res.send.
 		//개별적으로 처리해야되나? 아님 gcm push 성공 리턴시 send를 해야 하나?
 		//gcm 성공 실패 여부와 상관없이 gcm.sendToTopic의 finally에서 res.send(datas) 해야 되나?
+		//dbHandler에서 리턴된 data.message는  다시 messages 배열로 보내지고 또한 pushData로 푸시 보내기 위해 사용 됨
 		var response = {
 				error: datas.error,
-				message: datas.message,
+//				message: datas.message,	
+				messages: [datas.message],	//okhttp model 위해서 위의 message객체를 배열로 바꿔 보내기 위해
 				user: {}
-		}
+		};
 		dbHandler.getUser(user_id)
 		.then(function (user) {
 //			datas.user = user;
 			response.user = user;
-			 
 			var pushData = {
 					user: user,
 					message: datas.message,
-					chat_room_id: chat_room_id
+					chat_room_id: ""+chat_room_id
 			};
-			var push = new Push("Dongne push msg...", pushData, false, config.gcm.PUSH_FLAG_CHATROOM);
-			gcm.sendToTopic('topic_' + chat_room_id, push)
-			.then(function(body){
-				console.log('gcm body:', body);
-			}, function(error){
-				//sendToTopic's reject
-				console.log('gcm error:', error);
-//				res.send({ 
-//					error: true,
-//					message: "Failed to sendToTopic"
-//				});
-			}).finally(function(){
-				//response 객체를 then함수 안에 글로벌 객체로 만들어서 gcm.sendToTopic의 성공/실패 여부와 상관없이
-				//addMessage의 결과를 response함. gcm.sendToTopic의 결과는 console로만 출력해서 확인--> 에러나는 경우 래빗큐로 에러로그에 저장?
-				res.send(response);
-			});
+			var flag = config.gcm.PUSH_FLAG_CHATROOM;
+			if(pushType !== undefined){
+				flag = pushType;
+			}
+			var push = new Push("Dongne push msg...", pushData, false, flag);
+			console.log("push", push);
+			if(pushType){	//addChatRoom에서 요청한 푸시면
+				console.log("pushType", ""+pushType);
+				request({
+					method: 'POST',
+//					uri: config.host + '/users/' + to + '/message',
+					uri: config.host + '/users/message',
+					headers: {
+						'Content-Type' : 'application/json'
+					},
+					body: JSON.stringify({
+						user_id: user_id,
+						message: message,
+						message_id: datas.message.message_id,
+						chat_room_id: chat_room_id,
+						pushType: pushType,
+						to: to
+					})
+				}, function(error, resp, body) {
+					//resp === 푸시 요청 response
+					//response === 위에서 addMessage에 대한 response
+					//또한 요청이 성공하면 body:{error:flase, user:{to_user obj}} 가 리턴 됨
+//					console.log("pushRes:", resp);
+					console.log("pushBody:", body);
+					if(error){
+						console.log("error:", error);
+						return res.send({ error: true, message: 'gcm push error occuerred' });
+					}
+//					console.log("request response:\n", response);
+					//아래 else절(기존 코드)처럼 푸시요청에 대한 바디를 res.send하는게 아니고
+					//addMessage()에 대한 결과 값을 res.send함
+					res.setHeader('content-type', 'application/json; charset=utf-8');
+					res.send(response);
+				});		//request
+			} else {
+				gcm.sendToTopic('topic_' + chat_room_id, push)
+				.then(function(body){
+					console.log('gcm body:', body);
+				}, function(error){
+					//sendToTopic's reject
+					console.log('gcm error:', error);
+				}).finally(function(){
+					//response 객체를 then함수 안에 글로벌 객체로 만들어서 gcm.sendToTopic의 성공/실패 여부와 상관없이
+					//addMessage의 결과를 response함. gcm.sendToTopic의 결과는 console로만 출력해서 확인--> 에러나는 경우 래빗큐로 에러로그에 저장?
+					console.log("sendToTopic response:\n", response);
+					res.send(response);
+				});				
+			}//else
 		},function (error) {	//getUser's Error function
 			res.send({
 				error:true, 
-				message:"Failed to getUser info"
+				message: "Failed to getUser info"
 			});
 		});
 	},function (error) {	//addMessage Error function
 		res.send({
 			error:true, 
-			message:"Failed to addMessage"
+			message: "Failed to addMessage"
 		});
 	}).finally(function () {
 		
 	});
 });
+
 router.post('/users/:id/message', function(req, res, next){
 	/* 
 	 * Sending a message to user
@@ -209,6 +266,25 @@ router.post('/users/:id/message', function(req, res, next){
 	var from_user_id = req.body.user_id;
 	var message = req.body.message;
 	var to_user_id = req.params.id;
+
+	var reqDate = req.body.reqDate;
+	if(reqDate === undefined){
+		reqDate = TimeStamp.getCurrentTimeStamp(); //dateFormat안맞음. 수정해야함. 
+	}
+	//기존에 없던 message_id와 chat_room_id 바디변수를 추가했으므로 
+//	기존 코드에 대한 요청이 정상작동하도록 undefined에 대한 처리를 해줌
+	var message_id = req.body.message_id;
+	var chat_room_id = req.body.chat_room_id;
+	var flag = req.body.pushType;
+	if(message_id === undefined){
+		message_id = '';
+	}
+	if(chat_room_id === undefined){
+		chat_room_id = '';
+	}
+	if(flag === undefined){
+		flag = config.gcm.PUSH_FLAG_USER;
+	}
 	var response = { error: false, user: {}};
 	async.series([task1, task2], function(err, results) {
 		//results[0] == from_user, results[1] == to_user  
@@ -218,19 +294,26 @@ router.post('/users/:id/message', function(req, res, next){
 		}
 		var from_user = results[0],
 			to_user = results[1];
+//		console.log("from_user", from_user);
+//		console.log("to_user", to_user);
 		var msg = {
 			message: message,
-			message_id: '',
-			chat_room_id: '',
-			created_at: TimeStamp.getCurrentTimeStamp()
+			message_id: message_id,
+			chat_room_id: chat_room_id,
+			created_at: reqDate
 		};
+		//익명처리
+		if(flag === config.gcm.PUSH_FLAG_NOTIFICATION && message_id === 3){
+			from_user.name = "익 명";
+		}
 		var pushData = {
 			user: from_user,
+			chat_room_id: chat_room_id,
 			message: msg,
 			image:''
 		};
-		var push = new Push("Dongne push msg...", pushData, false, config.gcm.PUSH_FLAG_USER);
-		
+		var push = new Push("학교 사람들", pushData, false, flag);
+ 
 		gcm.send(to_user.gcm_registration_id, push)
 		.then(function(body){
 			console.log('gcm body:', body);
@@ -273,10 +356,24 @@ router.post('/users/message', function(req, res, next){
 	var to_user_ids = req.body.to;
 	var message = req.body.message;
 	
+	console.log("to_user_ids", to_user_ids);
+	var message_id = req.body.message_id;
+	var chat_room_id = req.body.chat_room_id;
+	var flag = req.body.pushType;
+	if(message_id === undefined){
+		message_id = '';
+	}
+	if(chat_room_id === undefined){
+		chat_room_id = '';
+	}
+	if(flag === undefined){
+		flag = config.gcm.PUSH_FLAG_USER;
+	}
+	var response = { error: false, user: {}};
 	async.series([task1, task2], function(err, results) {
 		//results[0] == from_user, results[1] == to_users list
 		if ( err ) {
-			next(err);
+			res.send({ error: true, message: "Failed to async.series" });
 			return;
 		}
 		var from_user = results[0],
@@ -292,31 +389,35 @@ router.post('/users/message', function(req, res, next){
 //		//===================
 		var msg = {
 			message: message,
-			message_id: '',
-			chat_room_id: '',
+			message_id: message_id,
+			chat_room_id: chat_room_id,
 //			created_at: Date.now('Y-m-d G:i:s')
 			created_at: TimeStamp.getCurrentTimeStamp()
 		};
-//		console.log(Date.now('Y-m-d G:i:s'));
-		console.log("TimeStamp: ", TimeStamp.getCurrentTimeStamp());
 		var pushData = {
 			user: from_user,
+			chat_room_id: chat_room_id,
 			message: msg,
 			image:''
 		};
-		var push = new Push("Dongne push msg...", pushData, false, config.gcm.PUSH_FLAG_USER);
+		var push = new Push("Dongne push msg...", pushData, false, flag);
 		
 		gcm.sendMultiple(registration_ids, push)
 		.then(function(body){
 			console.log('gcm body:', body);
-			res.send({
-				error: false
-			});	
+			response.user = from_user;
+//			res.send({
+//				error: false
+//			});	
 		}, function(error){
 			//sendToTopic's reject
-			res.send({ 
-				error: true
-			});
+//			res.send({ 
+//				error: true
+//			});
+			response.error = true;
+		}).finally(function(){
+			res.setHeader('content-type', 'application/json; charset=utf-8');
+			res.send(JSON.stringify(response));
 		});
 	});
 	
@@ -358,7 +459,7 @@ router.post('/users/send_to_all', function(req, res, next){
 				user: user,
 				message: msg,
 //				image: 'http://api.androidhive.info/gcm/panda.jpg'
-				image: 'http://10.0.3.2:3000/images/getPic/5768fa9f6602c62419e17946'
+				image: 'http://10.0.3.2:3000/images/getPic/1'
 			};
 		var push = new Push("Dongne push msg with image", pushData, false, config.gcm.PUSH_FLAG_USER);
 		
@@ -392,29 +493,59 @@ router.post('/test/addChatRoom', function(req, res, next){
 //	 fromUserId와 chatRoomId, message 파라미터 필요
 	var room_name = req.body.room_name;
 	var user_id = req.body.user_id;
-	var to_user_id = req.body.to;
+//	var to_user_ids = req.body.to;	//배열로 넘어옴.
+	var to_user_ids = [];
+	for (var key in req.body) {
+		if (req.body.hasOwnProperty(key)) {
+			// key === user_id, room_name 등
+			item = req.body[key];
+//			console.log(item);	
+			var sub = key.substring(0,2);
+			if(sub === "to"){
+				to_user_ids.push(item);
+			}
+		}
+	}
+	console.log("to_user_ids: ", to_user_ids);
+	if(to_user_ids.length === 0){
+		return res.send({error: true, message:"to_user_ids length error"});
+	}
 	var message = req.body.message;
+	
+	var chat_room_id = req.body.chat_room_id;
+	if(chat_room_id === "-1"){
+		//디비에 채팅방이 없는 상태에서 요청된 첫번째 메시지인 경우
+		console.log("chat_room_id === \"-1\"");
+	}
 	
 	dbHandler.createChatRoom(room_name)
 	.then(function (result) {
+//		var chat_room_id = req.params.id;
+//		var user_id = req.body.user_id;
+//		var message = req.body.message;
+//		/chat_rooms/:id/message
 		var room_id = result.insertId;
+		
 		request({
 			method: 'POST',
-			uri: config.host + '/users/' + to_user_id + '/message',
+			uri: config.host + '/chat_rooms/' + room_id + '/message',
 			headers: {
 				'Content-Type' : 'application/json',
 //				'Authorization' : 'key='+ config.gcm.apiKey
 			},
 			body: JSON.stringify({
 				user_id: user_id,
-				message: message
+				message: message,
+				pushType: config.gcm.PUSH_FLAG_NEW_ROOM,
+				to: to_user_ids
 			})
 		}, function(error, response, body) {
+//			console.log("pushRes:", response);
 			if(error){
 				console.log("error:", error);
-				res.send({ error: true, message: {}, user: {} });
+				return res.send({ error: true, message: "addChatRoom request error" });
 			}
-			console.log("body:", body);
+//			console.log("body:", body);
 			res.setHeader('content-type', 'application/json; charset=utf-8');
 			res.send(body);
 		});		//request
@@ -442,11 +573,112 @@ router.post('/test/addChatRoom', function(req, res, next){
 	},function (error) {
 		console.log('addChatRoom Error:', error);
 		res.send({
-			error:true, 
+			error: true, 
 			message:"Failed to addChatRoom"
 		});
 	});
 });
+
+//push message만을 위한 url
+router.post('/users/:id/push', function(req, res, next){
+	/* 
+	 * Sending a message to user
+	 * params: replace :id with actual user id
+	*/
+	var from_user_id = req.body.user_id;
+	var message = req.body.message;
+	var to_user_id = req.params.id;
+
+	//기존에 없던 message_id와 chat_room_id 바디변수를 추가했으므로 
+//	기존 코드에 대한 요청이 정상작동하도록 undefined에 대한 처리를 해줌
+	//이 url에서는 message_id와 chat_room_id는 필요 없음. 요청바디에 없어도 됨.
+	var message_id = req.body.message_id;	
+	var chat_room_id = req.body.chat_room_id;
+	
+	var flag = req.body.pushType;
+	var msgType = req.body.msgType;
+	switch(msgType){
+	case "0":
+		break;
+	case "1":
+		break;
+	case "2":
+		break;
+	case "3":
+		break;
+	case "4":
+		break;
+		default:
+			break;
+	}
+	
+	if(message_id === undefined){
+		message_id = '';
+	}
+	if(chat_room_id === undefined){
+		chat_room_id = '';
+	}
+	if(flag === undefined){
+		flag = config.gcm.PUSH_FLAG_USER;
+	}
+	var response = { error: false, user: {}};
+	async.series([task1, task2], function(err, results) {
+		//results[0] == from_user, results[1] == to_user  
+		if ( err ) {
+			res.send({ error: true, message: "Failed to async.series" });
+			return;
+		}
+		var from_user = results[0],
+			to_user = results[1];
+//		console.log("from_user", from_user);
+//		console.log("to_user", to_user);
+		var msg = {
+			message: message,
+			message_id: message_id,
+			chat_room_id: chat_room_id,
+			created_at: TimeStamp.getCurrentTimeStamp()
+		};
+		var pushData = {
+			user: from_user,
+			chat_room_id: chat_room_id,
+			message: msg,
+			image:''
+		};
+		var push = new Push("학교 사람들", pushData, false, flag);
+ 
+		gcm.send(to_user.gcm_registration_id, push)
+		.then(function(body){
+			console.log('gcm body:', body);
+			response.user = to_user;
+		}, function(error){
+			//sendToTopic's reject
+			console.log('gcm error:', error);
+			response.error = true;
+		}).finally(function (){
+			res.setHeader('content-type', 'application/json; charset=utf-8');
+			res.send(JSON.stringify(response));
+		});
+	});
+	
+	function task1(callback){
+		dbHandler.getUser(from_user_id)
+		.then(function (user) {
+			callback(null, user);
+		},function (error) {
+			callback(error);
+		});	
+	}
+	function task2(callback){
+		dbHandler.getUser(to_user_id)
+		.then(function (user) {
+			callback(null, user);
+		},function (error) {
+			callback(error);
+		});
+	}
+	
+});
+
 
 //====test routes
 

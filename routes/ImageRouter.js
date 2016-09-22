@@ -100,6 +100,7 @@ router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),fun
 		});
 	});
 });
+
 router.get('/getPic/:userId/:size',function (req, res, next) {
 	var userId = req.params.userId,
 		size = req.params.size;	//'small' or 'large'

@@ -3,7 +3,8 @@ var express = require('express'),
 	async = require('async'),
 	mUtil = require('../middleware/utilities'),
 	ObjectID = require('mongodb').ObjectID,
-	config = require('../config');
+	config = require('../config'),
+	request = require('request');
 
 var User = require('../db_models/userModel'),
 	Friend = require('../db_models/friendModel'),
@@ -169,8 +170,9 @@ router.post('/write', function(req, res, next) {
 				enterYear : users[0].univ[0].enterYear,
 				pic : users[0].pic
 			};
-			type += ""+users[0].univ[0].isGraduate;
-			type = type +""+req.body.type;
+//			type += ""+users[0].univ[0].isGraduate;
+//			type = type +""+req.body.type;
+			type = ""+req.body.type;
 			console.log("write type", type);
 			var info = {
 				univId : req.body.univId,
@@ -326,7 +328,9 @@ router.post('/like', function (req, res, next) {
 	console.log('/like req.body:', req.body);
 	var boardId = req.body.boardId;
 	var userId = req.body.userId;
-//	console.log('/like args:', userId);
+	
+	var reqDate = req.body.reqDate;
+	var to = req.body.to;	//푸쉬받을 상대
 	if( boardId != undefined && userId != undefined){
 		Board.update(
 				{
@@ -340,7 +344,32 @@ router.post('/like', function (req, res, next) {
 				}, function (err, doc) {
 			if (err) return next(err);
 			if (doc.n == 1){
-				res.send({error: false, message: 'like inc complete'});
+				request({
+					method: 'POST',
+					uri: config.host + '/users/' + to + '/message',
+					headers: { 'Content-Type' : 'application/json' },
+					body: JSON.stringify({
+						reqDate: reqDate,
+						user_id: userId,
+						message: config.gcm.MSG_PUSH_LIKE,
+						message_id: 1,	//id === 1 이면 클라이언트 컨피그 파일의 게시글을 좋아합니다..
+						chat_room_id: boardId,	//chat_room_id 게시글의 아이디를 넣어서 바로 열어 볼 수 있게
+						pushType: config.gcm.PUSH_FLAG_NOTIFICATION,
+						to: to	
+					})
+				}, function(error, resp, body) {
+//					시간차이 기존 8ms --> 200ms 응답시간 차이를 보임(200ms는 푸시 요청 응답시간)
+//					푸시가 가든 안가든 확인할 필요 없다고 치면
+//					에러 났을 때 로그 처리만하고 그 외는 아무것도 안하면 됨.
+//					res.setHeader('content-type', 'application/json; charset=utf-8');
+//					if(error){
+//						console.log("error:", error);
+//						return res.send({ error: true, message: 'gcm push error occuerred' });
+//					}
+//					res.send({error: false, message: 'like inc complete'});
+					if(error){ console.log("like push error:", error);}
+				});		//request
+				res.send({error: false, message: 'like inc complete'}); //gcm 적용전 기존 코드 한줄
 			} else {
 				res.send({error: true, message: 'failed to like updates'});
 			}
@@ -349,6 +378,8 @@ router.post('/like', function (req, res, next) {
 		res.send({error: true, message: 'args undefined'});
 	}
 });
+
+
 
 router.post('/dislike', function (req, res, next) {
 	console.log('/dislike req.body:', req.body);

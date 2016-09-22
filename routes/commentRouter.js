@@ -2,7 +2,9 @@ var express = require('express'),
 	router = express.Router(),
 	async = require('async'),
 	mUtil = require('../middleware/utilities'),
-	ObjectID = require('mongodb').ObjectID;
+	ObjectID = require('mongodb').ObjectID,
+	config = require('../config'),
+	request = require('request');
 
 var User = require('../db_models/userModel'),
 	Friend = require('../db_models/friendModel'),
@@ -46,8 +48,13 @@ function addCommentRoutes(req, res, next) {
 		username = req.body.username,
 		userId = parseInt(req.body.userId),
 		body = req.body.body,
+		type = req.body.type,
 		parentCommentId = ""+req.body.parentCommentId;
-		
+	
+	//gcm push위해 새로 추가
+	var reqDate = req.body.reqDate,
+		to = req.body.to;
+	
 	Board.findOne({ "boardId": boardId}).exec(function(err, board){
 		if(err) return next(err);
 		if(!board){ 
@@ -66,11 +73,13 @@ function addCommentRoutes(req, res, next) {
 		        	//newComment's info
 		        	var info = {
 		        			boardId: board.boardId,
-			        		body: req.body.body
+			        		body: req.body.body,
+			        		type: type
 			        };
 //					var newComment = Reply(req.body.newComment); //newComment를 var info{subject, body} 식으러 만들어
 			        var newComment = new Reply(info); 
 //					newComment.username = generateRandomUsername();
+			        gcmInfo.to = board.writer;
 					addComment(req, res, comment, comment, comment._id, newComment);
 //					addComment(req, res, commentThread, currentComment, parentCommentId, newComment);
 //					parentId는 새로 생성한거니까 같은 코멘트쓰레드의 아이디를 넣음
@@ -83,7 +92,8 @@ function addCommentRoutes(req, res, next) {
 				var info = {
 						userId: userId,
 						username: username,
-		        		body: body
+		        		body: body,
+		        		type: type
 		        };
 				if(!commentThread) {
 //						return res.json(404, {
@@ -209,14 +219,16 @@ function addComment(req, res, commentThread, currentComment, parentId, newCommen
 	}
 	if (commentThread.id == parentId) {
 		commentThread.replies.push(newComment);
-		updateCommentThread(req, res, commentThread);
+//		updateCommentThread(req, res, commentThread);
+		updateCommentThread(req, res, commentThread, newComment);	
+		//newComment 오버라이딩한이유는 새로추가된 댓글_id 확인 위해
 	} else {
 		for (var i = 0; i < currentComment.replies.length; i++) {
 			var c = currentComment.replies[i];
 			if (c._id == parentId) {
 				c.replies.push(newComment);
 				var replyThread = commentThread.replies.toObject();
-				updateCommentThread(req, res, commentThread);
+				updateCommentThread(req, res, commentThread, newComment);
 				break;
 			} else {
 				addComment(req, res, commentThread, c, parentId, newComment);
@@ -224,7 +236,7 @@ function addComment(req, res, commentThread, currentComment, parentId, newCommen
 		}
 	}
 };
-function updateCommentThread(req, res, commentThread) {
+function updateCommentThread(req, res, commentThread, newComment) {
 	CommentThread.update({ _id : commentThread.id }, 
 			{ $set: { replies : commentThread.replies }
 	}).exec(function(err, result) {
@@ -234,10 +246,35 @@ function updateCommentThread(req, res, commentThread) {
 				message : 'Failed to update CommentThread.'
 			});
 		} else {
+			var msg = config.gcm.MSG_PUSH_REPLY;
+			var msg_id = 2;
+			if(newComment.type === "00" || newComment.type === "10"){
+				msg = config.gcm.MSG_PUSH_REPLY_ANONYMOUS;
+				msg_id = 3;
+			}
+			request({
+				method: 'POST',
+				uri: config.host + '/users/' + req.body.to + '/message',
+				headers: { 'Content-Type' : 'application/json' },
+				body: JSON.stringify({
+					reqDate: req.body.reqDate,
+					user_id: req.body.userId,
+					message: msg,
+					message_id: msg_id,	//id===2 면 클라이언트 스트링밸류 2 댓글이 달렸습니다.
+					chat_room_id: req.body.boardId,
+					pushType: config.gcm.PUSH_FLAG_NOTIFICATION,
+					to: req.body.to	
+					//to는 필요 없는 것 같은데 sendAll 할때 쓰고선 계속 복붙한듯, 코멘트는 to가 있어야 하나?
+				})
+			}, function(error, resp, body) {
+				if(error){ console.log("addComment push error:", error);}
+			});		//request
+			//request(writer에게 푸시)와는 별개로 글쓴이에게 성공 응답
+			console.log("newComment:", newComment);
 			res.json({
 				error: false,
 				message : " Successfully Comment updated",
-//				result: result //update result보내면 클라이언트 모델이랑 매칭 안됨
+				result: newComment
 			});
 		}
 	});

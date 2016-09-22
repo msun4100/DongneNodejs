@@ -34,7 +34,9 @@ var UserSchema = Schema({
 	
 	//for response
 	temp: {type: String, default: ""},
+	status: {type: Number, default: -1},
 	isFriend: {type: Boolean, default: false}
+	
 //	friends:[ Number ],
 	//ofObjectId: [Schema.Types.ObjectId],
 //	rooms:[Number]

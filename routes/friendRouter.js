@@ -7,14 +7,64 @@ var User = require('../db_models/userModel'),
 	Friend = require('../db_models/friendModel');
 
 var gpsProvider = require('../gpsProvider')();
+var config = require('../config'),
+	request = require('request');
 
+//router.post('/friends/:friend', addFriends); //deprecated, update로 대체
 
-//router.post('/friends/:friend', addFriends); //deprecated
 router.get('/friends/:status', showFriends);
 router.post('/friends/:status', updateFriends);
+router.get('/friends/:status/:userId', getStatus);
+router.delete('/friends/:userId', removeFriends);
 router.get('/friends/univ/:univId', showUnivUsers);
 router.post('/friends/univ/:univId', postUnivUsers);
 router.post('/friends/univ/:univId/my', postMyFriends);
+
+function removeFriends(req, res, next){
+	var userId = req.params.userId;
+	var user = req.user;
+//	query.and([ {$or:[{"from": user.userId, "to": userId}, {"from": userId, "to": user.userId}]}, {"status": status} ])
+	Friend.findOneAndRemove( 
+			{"$or":[{"from": user.userId, "to": userId}, {"from": userId, "to": user.userId}]} )
+			.then(function fulfilled(result){ 
+				res.send({error: false, message: 'successfully removed'}); 
+			},function rejected(err) { 
+				res.send({error: true, message: 'remove error occurred'}); 
+			});
+}
+
+
+function getStatus(req, res, next){
+	var status = req.params.status;
+	var userId = req.params.userId;
+	var user = req.user;
+
+	if(status === undefined || userId === undefined){
+		res.send({
+			error: true,
+	    	message:'params undefined error',
+		});
+		return;
+	}
+	
+	var query = Friend.find();
+//	query.or([{"from": user.userId, "to": to}, {"from": to, "to": user.userId}]);
+	query.and([ {$or:[{"from": user.userId, "to": userId}, {"from": userId, "to": user.userId}]}, {"status": status} ])
+	query.exec(function(err, docs){
+		if(err){
+			err.code = 500;
+			next(err);
+		} 
+		if(docs.length === 1){
+			res.send({error:false, message: 'find status', result: docs[0]}); 
+			return;
+		} else {
+			res.send({error: true, message: 'find error'}); 
+			return;
+		}		
+	});
+	
+}
 router.post('/friends/test/reqdate', function(req,res,next){
 	var univId = 1;
 	var start = parseInt(req.body.start);
@@ -40,21 +90,23 @@ function updateFriends(req, res, next) {
 
 	var user = req.user;
 	var to = req.body.to;
+	var msg = "";
+	if(req.body.msg){
+		msg = req.body.msg;
+	}
+	var reqDate = req.body.reqDate;
 //	if (user) {
 //	} else {
 //		next(new Error({code : 500,message : 'do not login'}));
 //	}
 	if(to === undefined || to === null || to === ""){
-		res.send({
-			error: true,
-	    	message:'from or to userId is null',
-		});
+		res.send({ error: true, message:'from or to userId is null', });
 		return;
 	}
 	
-	var info = {"from": user.userId, "to": to, "actionUser": user.userId, "status": status};
+	var info = {"from": user.userId, "to": to, "actionUser": user.userId, "status": status, "msg": msg};
 	var friend = new Friend(info);
-//	console.log('friend: ', friend);
+	
 	var query = Friend.find();
 	query.or([{"from": user.userId, "to": to}, {"from": to, "to": user.userId}]);
 	query.exec(function(err, docs){
@@ -68,23 +120,70 @@ function updateFriends(req, res, next) {
 				docs[0].status = status;
 				docs[0].updatedAt = Date.now();
 				docs[0].actionUser = user.userId;
+				docs[0].msg = msg;
 			} else {
-				res.send({success:0, msg:'wrong status', result: {} }); 
+				res.send({error: true, message:'wrong status'}); 
 				return;
 			}
 			docs[0].save(function(err, doc){
 				if(err) return next(err);
+//				//insertId 객체로 표시되는지 확인
+//				console.log("doc", doc );	//doc도 docs[0]과 같음
+//				console.log("docs[0]", docs[0] );
+				
+				//새로 만들어지고, status == 0일때 to에게 푸시를 보냄.
+				// status == 1이 되면 message_id == 4, from에게 푸시를 보냄.
+				if(parseInt(docs[0].status) === 1){
+					request({
+						method: 'POST',
+						uri: config.host + '/users/' + docs[0].from + '/message',
+						headers: { 'Content-Type' : 'application/json' },
+						body: JSON.stringify({
+							reqDate: reqDate,
+							user_id: docs[0].to,
+							message: config.gcm.MSG_PUSH_CONFIRM,
+							message_id: 4,	//id === 4 to님이 회원님의 친구신청을 수락했습니다.
+							chat_room_id: -1000,	// -1000 == intent statusActivity
+							pushType: config.gcm.PUSH_FLAG_NOTIFICATION,
+							to: docs[0].from
+						})
+					}, function(error, resp, body) {
+						if(error){ console.log("add Friends by update func push error", error);}
+					});		//request					
+				}//if
+				
 				res.send({
-			    	success:1,
-			    	msg:'friends status changed',
-			    	result:docs
+			    	error: false,
+			    	message:'friends status changed',
+			    	result: docs[0]
 			    });	
 			});
 		} else if( docs.length === 0 ){
+			//위에서 생성해둔 객체
 			friend.save().then(function fulfilled(result) {
+				//새로 만들어지고, status == 0일때 to에게 푸시를 보냄.
+				// status == 1이 되면 message_id == 4, from에게 푸시를 보냄.
+				if(parseInt(friend.status) === 0){
+					request({
+						method: 'POST',
+						uri: config.host + '/users/' + friend.to + '/message',
+						headers: { 'Content-Type' : 'application/json' },
+						body: JSON.stringify({
+							reqDate: reqDate,
+							user_id: friend.from,
+							message: config.gcm.MSG_PUSH_RECEIVE,
+							message_id: 5,	//id === 5 님의 친구신청이 도착했습니다.
+							chat_room_id: -1000,	// -1000 == intent statusActivity
+							pushType: config.gcm.PUSH_FLAG_NOTIFICATION,
+							to: friend.to
+						})
+					}, function(error, resp, body) {
+						if(error){ console.log("add Friends by update func push error", error);}
+					});		//request					
+				}//if
 				res.send({
-					success : 1,
-					msg : 'add Friends by update func',
+					error : false,
+					message : 'add Friends by update func',
 					result : result
 				});
 			}, function rejected(err) {
@@ -94,7 +193,7 @@ function updateFriends(req, res, next) {
 				next(err);
 			});
 		} else {
-			res.send({success:0, msg:'find error', result: {} }); 
+			res.send({error:false, message: 'find error'}); 
 			return;
 		}
 		
@@ -104,6 +203,10 @@ function updateFriends(req, res, next) {
 function addFriends(req, res, next) {
     var user = req.user;	//session에 user가 저장되어 있는지
     var reqFriend = req.params.friend;
+    var msg = "";
+    if(req.body.msg){
+    	msg = req.body.msg;
+    }
     console.log('reqeusted friends', reqFriend);
 //    if( user ){
 //    	
@@ -111,7 +214,7 @@ function addFriends(req, res, next) {
 //    	var err={ code: 500, message: 'do not login'};
 //		next(err);
 //    }
-    var info = {from: user.userId, to: reqFriend, actionUser: user.userId};
+    var info = {from: user.userId, to: reqFriend, actionUser: user.userId, msg: ""};
     var friend = new Friend(info);
     console.log('friend: ', friend);
     
@@ -126,16 +229,17 @@ function addFriends(req, res, next) {
 		} 
 		if(docs.length > 0){
 			res.send({
-				success : 1,
-				msg : 'already requests',
-				result : docs
+				error : false,
+				message : 'already requests',
+				result: docs[0].msg
+					
 			});	
 		} else {
 			friend.save().then(function fulfilled(result) {
 				console.log('result:', result);
 				res.send({
-					success : 1,
-					msg : 'add Friends',
+					error: false,
+					message : 'add Friends',
 					result : result
 				});
 			}, function rejected(err) {
@@ -231,6 +335,26 @@ function postUnivUsers(req, res, next) {
 	var start = parseInt(req.body.start);
 	var display = parseInt(req.body.display);
 	var reqDate = req.body.reqDate;
+	
+	var sort = req.body.sort;
+	
+	var sortObj;
+	switch(sort){
+	case "1":	//학번순 정렬(오름차순)
+		sortObj = { "univ.enterYear" : 1};
+		break;
+	case "2":	//학번순 정렬(내림차순)
+		sortObj = { "univ.enterYear" : -1};
+		break;
+	case "3":	//가까이 있는 동문
+//		break;
+	case "0":	//기본 정렬
+	default:
+		sortObj = { "username" : 1};
+		break;
+	} 
+	
+	console.log("sortObj", sortObj);
 	var user = req.user;
 	console.log("/friends/univ/:univId", req.body);
 	
@@ -243,7 +367,8 @@ function postUnivUsers(req, res, next) {
 //	        	User.find({"univ.univId": univId, "updatedAt": {"$lte": reqDate}}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
 	        	console.time('TIMER-ne');
 	        	User.find({"userId": {"$ne": user.userId}, "univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
-	        	.sort({username: 1})
+//	        	.sort({username: 1})
+	        	.sort(sortObj)
 	        	.skip(start * display)
 	        	.limit(display).exec(function(err, users){
 	        		console.timeEnd('TIMER-ne');
@@ -268,24 +393,29 @@ function postUnivUsers(req, res, next) {
 	        function (users, callback) {
 	        	//find accepted friends and fetch isFriend
 	        	var query = Friend.find();
-	    		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ])
+//	    		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ])
+	        	query.or( [{from: user.userId}, {to: user.userId}] )
+//	    		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: {"$lt":3} } ])
 	    		query.select({_id:0});
-//	    		query.sort({ userId: 1});
 	    		query.exec().then(function fulfilled(results) {
 	    			console.time('TIMER-ISFRIEND');
 	    			var ids = [];
+	    			var status = [];
 	    			var i, j;
 	    			for(i=0; i < results.length; i++){
 	    				if(results[i].from === user.userId){
-	    					ids.push(results[i].to);	
+	    					ids.push(results[i].to);
+	    					status.push(results[i].status);
 	    				} else if(results[i].to === user.userId){
-	    					ids.push(results[i].from);	
+	    					ids.push(results[i].from);
+	    					status.push(results[i].status);
 	    				}
 	    			}
 	    			for(i=0; i < ids.length; i++){
 	    				for (j = 0; j < users.length; j++) {
 	    					if (users[j].userId === ids[i]) {
 	    						users[j].isFriend = true;
+	    						users[j].status = status[i];
 	    						break;
 	    					}
 	    				}
@@ -365,6 +495,7 @@ function postMyFriends(req, res, next) {
 				if(users.length !== 0){
 					for (i = 0; i < ids.length; i++) {
 						users[i].isFriend = true;
+						users[i].status= 1;
 					}
 					console.log("myFriends Total:", count);
 					fetchDistance(user.location, users, function(err, list) {
@@ -402,31 +533,43 @@ function showFriends(req, res, next){
 //	3 blocked .and({from:3, status:3})	//차단한
 	var status = req.params.status;
 	var user = req.user;
+	
 	switch(status){
 	case "0":
-		var list = [];
 		var query = Friend.find();
-		query.and({from:user.userId, status:0});
+		query.and({from: user.userId, status: 0});
 		query.select({_id:0});
+		query.sort({updatedAt: -1});
 		query.exec().then(function fulfilled(results) {
+			var i=0;
 			var ids = [];
 			for(i=0; i< results.length; i++){
+				if(results[i].from === undefined || results[i].to === undefined){
+					continue;
+				}
 				if(results[i].from === user.userId){
 					ids.push(results[i].to);	
 				} else if(results[i].to === user.userId){
 					ids.push(results[i].from);	
 				}
 			}
-			User.find({ "userId":{$in: ids} }, {_id:0, password:0, salt:0, work:0, createdAt:0, __v:0, "univ._id":0 },function(err, users){
-				if(users.length != 0){
+			User.find({ "userId":{$in: ids} }, 
+					{ _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 },
+//					{ sort: {"updatedAt": -1}}, 
+					function(err, users){
+				if(users.length !== 0){
+					for(i=0; i < users.length; i++){
+						users[i].status = 0;	//00이지만 어차피나오는 건 0
+	    			}
 					fetchDistance(user.location, users, function(err, list){
-						if(err) return next(err);
+						if(err) {return next(err);}
+//						console.log(list);
 						res.send({
 							error : false,
 							message:'pending-0 friends: ' + users.length,
 							result : list
 						});						
-					});
+					});	
 				} else {
 					res.send({
 						error : true,
@@ -440,11 +583,15 @@ function showFriends(req, res, next){
 		});
 		break;
 	case "00":
+		console.time('TIMER-status');	//실행시간 체크 스타트
 		var query = Friend.find();
 		query.and({to:user.userId, status:0});
 		query.select({_id:0});
+		query.sort({updatedAt: -1});
 		query.exec().then(function fulfilled(results) {
+			var i=0;
 			var ids = [];
+//			console.log(results);
 			for(i=0; i< results.length; i++){
 				if(results[i].from === undefined || results[i].to === undefined){
 					continue;
@@ -455,13 +602,24 @@ function showFriends(req, res, next){
 					ids.push(results[i].from);	
 				}
 			}
-			User.find({ "userId":{$in: ids} }, function(err, users){
-				if(users.length != 0){
-					res.send({
-						error : false,
-						message:'pending-00 friends',
-						result : users
-					});		
+			User.find({ "userId":{$in: ids} }, 
+					{ _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 },
+//					{ sort: {"updatedAt": -1}}, 
+					function(err, users){
+				if(users.length !== 0){
+					for(i=0; i < users.length; i++){
+						users[i].status = 0;	//00이지만 어차피나오는 건 0
+	    			}
+					fetchDistance(user.location, users, function(err, list){
+						if(err) {return next(err);}
+//						console.log(list);
+						res.send({
+							error : false,
+							message:'pending-00 friends: ' + users.length,
+							result : list
+						});
+						console.timeEnd('TIMER-status');	//실행시간 체크 스타트
+					});	
 				} else {
 					res.send({
 						error : true,
@@ -486,6 +644,7 @@ function showFriends(req, res, next){
 		query.select({_id:0});
 //		query.sort({ userId: 1});
 		query.exec().then(function fulfilled(results) {
+			var i=0;
 			var ids = [];
 			var total = 0;
 			for(i=0; i< results.length; i++){
@@ -524,6 +683,7 @@ function showFriends(req, res, next){
 		});
 		break;
 	case "2":
+		var i=0;
 		var ids = [];
 		var query = Friend.find();
 		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {actionUser: user.userId}, {status: 2}  ])
@@ -558,30 +718,46 @@ function showFriends(req, res, next){
 		});
 		break;
 	case "3":
-		var ids = [];
+		console.time('TIMER-status');	//실행시간 체크 스타트
 		var query = Friend.find();
 		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {actionUser: user.userId}, {status: 3} ])
-//		query.and({from: user.userId, status:2})
 		query.select({_id:0});
+		query.sort({updatedAt: -1});
 		query.exec().then(function fulfilled(results) {
+			var i=0;
+			var ids = [];
 			for(i=0; i< results.length; i++){
+				if(results[i].from === undefined || results[i].to === undefined){
+					continue;
+				}
 				if(results[i].from === user.userId){
 					ids.push(results[i].to);	
 				} else if(results[i].to === user.userId){
 					ids.push(results[i].from);	
 				}
 			}
-			User.find({ "userId":{$in: ids} }, function(err, users){
-				if(users.length != 0){
-					res.send({
-						error : false,
-						message:'blocked friends',
-						result : users
-					});		
+			User.find({ "userId":{$in: ids} }, 
+					{ _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 },
+//					{ sort: {"updatedAt": -1}}, 
+					function(err, users){
+				if(users.length !== 0){
+					for(i=0; i < users.length; i++){
+						users[i].status = 3;	//blocked === 3
+	    			}
+					fetchDistance(user.location, users, function(err, list){
+						if(err) {return next(err);}
+//						console.log(list);
+						res.send({
+							error : false,
+							message:'blocked-3 friends: ' + users.length,
+							result : list
+						});
+						console.timeEnd('TIMER-status');	//실행시간 체크 스타트
+					});	
 				} else {
 					res.send({
 						error : true,
-						message:'has no blocked friends',
+						message:'has no blocked-3 friends',
 					});	
 				}
 			});

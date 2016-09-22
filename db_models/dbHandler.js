@@ -112,7 +112,7 @@ var getAllChatRooms = function(){
 	return new Promise(function (resolve, reject) {
 		pool.getConnection(function (err, conn) {      
 			if (err) { reject(err); }
-		    var sql = 'SELECT * FROM chat_rooms';
+		    var sql = 'SELECT * FROM chat_rooms ORDER BY created_at DESC';
 		    conn.query(sql, function (err, rooms) {
 		    	if (err) {
 		           conn.release();
@@ -193,6 +193,8 @@ var getChatRoomMsg = function(chat_room_id){
 		    			cmt.message = item.message;
 		                cmt.message_id = item.message_id;
 		                cmt.created_at = item.created_at;
+//		                모든메시지에 chat_room_id를 달아 보내는 것은 불필요하므로 이 요청에서는 chat_room 바디 한번만 보냄.
+//		                cmt.chat_room_id = item.chat_room_id;
 		                
 		                var user = {};
 		                user.user_id = item.user_id;
@@ -298,7 +300,7 @@ var addMessage= function(user_id, chat_room_id, message){
 		    			var row = rows[0];
 		    			var tmp = {};
 		    			tmp.message_id= row.message_id;
-		    			tmp.chat_room_id= row.chat_room_id;
+		    			tmp.chat_room_id= row.chat_room_id;	//int type
 		    			tmp.message= row.message;
 		    			tmp.created_at= row.created_at;
 		    			datas.message = tmp;
@@ -399,7 +401,7 @@ var createChatRoom = function(room_name){
 //    	    };
 		    conn.query(sql, input, function (err, result) {
 		    	if (err) { conn.release(); reject(err); }
-		    	console.log("insert Result:", result);
+//		    	console.log("addChatRoom Result:", result);
 		    	if(result.affectedRows > 0){
 		    		var chat_room_id = result.insertId;
 		    		conn.release();
