@@ -9,7 +9,7 @@ var BoardSchema = new Schema({
 	univId: {type: Number, ref: 'Univ', required: true},
 	writer: {type: Number, ref: 'User', required: true},	//User.userId
 	pageId: {type: Number, ref: 'Page'},	//0:재학생, 1:졸업생, 2:~page#
-	type: {type: String, "default": "01"},	//00:재학생/비공개, 01:재학생/공개, 10:졸업생/비공해, 11:졸업생/공개
+	type: {type: String, "default": "01"},	//00:재학생/비공개, 01:재학생/공개, 10:졸업생/비공개, 11:졸업생/공개
     title: String,
     
     body: {type: String, "default": "내용을 입력해주세요."},
@@ -20,8 +20,7 @@ var BoardSchema = new Schema({
     createdAt: { type: Date, "default": Date.now },
     updatedAt: { type: Date, "default": Date.now },
     commentId: { type: Schema.Types.ObjectId, ref: 'CommentThread'},
-    user: { 
-    	pic: {small: {type: String, default: ""}, large: {type: String, default: ""}}, 
+    user: {  
     	username: {type: String, default: "name"}, 
     	enterYear: {type: Number, default: 2000},
     	deptname: {type: String, default: "deptname"}

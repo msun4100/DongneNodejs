@@ -60,7 +60,7 @@ router.get('/list/:page', function(req, res, next) {
 });
 
 router.post('/list/:univId/:tab', function(req, res, next) {
-	var univId = req.params.univId,
+	var univId = parseInt(req.params.univId),
 		tab = parseInt(req.params.tab);	//0:재학생 글들 00~01, 1: 졸업생 글 10~11
 	var start = parseInt(req.body.start),
 		display = parseInt(req.body.display),
@@ -149,9 +149,438 @@ router.post('/list/:univId/:tab', function(req, res, next) {
 			comment: comments
 		});
 		//finally...
+	});	
+});
+
+router.post('/list/:univId/:tab/search', function(req, res, next) {
+	var univId = parseInt(req.params.univId),
+		tab = parseInt(req.params.tab);	//0:재학생 글들 00~01, 1: 졸업생 글 10~11
+	var start = parseInt(req.body.start),
+		display = parseInt(req.body.display),
+		reqDate = req.body.reqDate;
+	var total = 0;
+	var typeArr = [];
+	if(tab !== undefined && tab === 0){ 
+		typeArr.push("00"); typeArr.push("01");
+	} else {
+		typeArr.push("10"); typeArr.push("11");
+	}
+	if(typeArr === null || typeArr === undefined) return next(new Error('TYPE_ARR_UNDEFINED_ERROR'));
+
+	var word = req.body.word;
+	console.log("req.body", req.body);
+	async.waterfall([ function(callback){ 
+		//total리턴을 위한 카운트 연산. count()콜백안에 async를 넣어도 되지만 가독성이 떨어져서 async 첫 번째 콜에 둠.
+		console.time('TIMER-mycount');
+		var query = Board.count();
+//		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
+		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.exec(function(err, count){
+			if(err) callback(err, null);
+			if(count === 0) {
+				console.log("board_count_is_zero");
+				console.timeEnd('TIMER-mycount');
+				callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			} else {
+				console.timeEnd('TIMER-mycount');
+				total = count;
+				callback(null, count);	
+			}
+		});
+	}, function(count, callback){
+		var query = Board.find();
+//		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
+		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.select({__v:0});
+		query.sort({ "_id": -1});
+		query.skip(start * display);
+	 	query.limit(display);
+		query.exec(function(err, results){
+			if(err) callback(err, null);
+//			console.log(results);
+			if(results.length === 0) callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			var ids = [];
+			for(i=0; i< results.length; i++){
+				ids.push(results[i].commentId);
+			}
+			callback(null, results, ids);
+		});		
+	}, function(results, ids, callback){
+		//======
+//		console.log("commentIds:", ids);
+		var query = CommentThread.find();
+//		query.and([ {_id: {"$in": ids}}, {"updatedAt": {"$lte": reqDate}} ]);
+		query.and([ {_id: {"$in": ids}}]);
+		query.select({__v:0, title:0});
+		query.sort({ "_id": -1});
+//		query.sort({ "replies.updatedAt": -1});
+//		query.skip(start * display);
+//	 	query.limit(3);
+		query.exec(function(err, docs){
+			//검색된 보드 중 코멘트가 하나도 없으면 docs === [];
+//			console.log("docs", docs);
+			callback(null, results, docs);
+		});
+		//===================
+		
+	}], function(err, results, comments){
+		if(err){
+			if(err.message === 'HAS_NO_BOARD_ITEM'){
+				return res.send({ error: false, message: err.message});
+			} else { 
+				return next(err); 
+			}
+		}
+		res.send({
+			error:false, 
+			message: 'univId: '+univId+' board List: '+ results.length,
+			total: total,
+			result: results,
+			comment: comments
+		});
+		//finally...
 		
 	});	
 });
+
+router.post('/myinterest', function(req, res, next) {
+	var univId = parseInt(req.body.univId);
+//	var	tab = parseInt(req.params.tab);	//0:재학생 글들 00~01, 1: 졸업생 글 10~11
+	var start = parseInt(req.body.start),
+		display = parseInt(req.body.display),
+		reqDate = req.body.reqDate;
+	var total = 0;
+	var word = req.body.word;
+	var userId = parseInt(req.body.userId);
+	if(!req.body.userId || !req.body.univId) {return res.send({error:true, message:'args undefined error'});}
+	async.waterfall([ function(callback){ 
+		//total리턴을 위한 카운트 연산. count()콜백안에 async를 넣어도 되지만 가독성이 떨어져서 async 첫 번째 콜에 둠.
+		console.time('TIMER-mycount');
+		var query = Board.count();
+		query.and([ {"univId": univId}, {"likes": userId} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.exec(function(err, count){
+			if(err) callback(err, null);
+			if(count === 0) {
+				console.log("board_count_is_zero");
+				console.timeEnd('TIMER-mycount');
+				callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			} else {
+				console.timeEnd('TIMER-mycount');
+				total = count;
+				callback(null, count);	
+			}
+		});
+	}, function(count, callback){
+		var query = Board.find();
+		query.and([ {"univId": univId}, {"likes": userId} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.select({__v:0});
+		query.sort({ "_id": -1});
+		query.skip(start * display);
+	 	query.limit(display);
+		query.exec(function(err, results){
+			if(err) callback(err, null);
+//			console.log(results);
+			if(results.length === 0) callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			var ids = [];
+			for(i=0; i< results.length; i++){
+				ids.push(results[i].commentId);
+			}
+			callback(null, results, ids);
+		});		
+	}, function(results, ids, callback){
+		//======
+//		console.log("commentIds:", ids);
+		var query = CommentThread.find();
+//		query.and([ {_id: {"$in": ids}}, {"updatedAt": {"$lte": reqDate}} ]);
+		query.and([ {_id: {"$in": ids}}]);
+		query.select({__v:0, title:0});
+		query.sort({ "_id": -1});
+		query.exec(function(err, docs){
+			callback(null, results, docs);
+		});
+		//===================
+		
+	}], function(err, results, comments){
+		if(err){
+			if(err.message === 'HAS_NO_BOARD_ITEM'){
+				return res.send({ error: false, message: err.message});
+			} else { 
+				return next(err); 
+			}
+		}
+		res.send({
+			error:false, 
+			message: 'univId: '+univId+' myInterest List: '+ results.length,
+			total: total,
+			result: results,
+			comment: comments
+		});
+	});	
+});
+
+router.post('/myinterest/search', function(req, res, next) {
+	var univId = parseInt(req.body.univId);	//parseInt한건 routing이 꼬여서 에러 찾다가 수정함. /list/mywriting/search하면 라우팅 꼬임
+//	var	tab = parseInt(req.params.tab);	//0:재학생 글들 00~01, 1: 졸업생 글 10~11
+	var start = parseInt(req.body.start),
+		display = parseInt(req.body.display),
+		reqDate = req.body.reqDate;
+	var total = 0;
+	var word = req.body.word;
+	var userId = parseInt(req.body.userId);
+	if(!req.body.userId || !req.body.univId) {return res.send({error:true, message:'args undefined error'});}
+	async.waterfall([ function(callback){ 
+		//total리턴을 위한 카운트 연산. count()콜백안에 async를 넣어도 되지만 가독성이 떨어져서 async 첫 번째 콜에 둠.
+		console.time('TIMER-mycount');
+		var query = Board.count();
+		query.and([ {"univId": univId}, {"likes": userId} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.exec(function(err, count){
+			if(err) callback(err, null);
+			if(count === 0) {
+				console.log("board_count_is_zero");
+				console.timeEnd('TIMER-mycount');
+				callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			} else {
+				console.timeEnd('TIMER-mycount');
+				total = count;
+				callback(null, count);	
+			}
+		});
+	}, function(count, callback){
+		var query = Board.find();
+		query.and([ {"univId": univId}, {"likes": userId} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.select({__v:0});
+		query.sort({ "_id": -1});
+		query.skip(start * display);
+	 	query.limit(display);
+		query.exec(function(err, results){
+			if(err) callback(err, null);
+			if(results.length === 0) callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			var ids = [];
+			for(i=0; i< results.length; i++){
+				ids.push(results[i].commentId);
+			}
+			callback(null, results, ids);
+		});		
+	}, function(results, ids, callback){
+		var query = CommentThread.find();
+		query.and([ {_id: {"$in": ids}}]);
+		query.select({__v:0, title:0});
+		query.sort({ "_id": -1});
+		query.exec(function(err, docs){
+			callback(null, results, docs);
+		});
+	}], function(err, results, comments){
+		if(err){
+			if(err.message === 'HAS_NO_BOARD_ITEM'){
+				return res.send({ error: false, message: err.message});
+			} else { 
+				return next(err); 
+			}
+		}
+		res.send({
+			error:false, 
+			message: 'univId: '+univId+' myInterest List: '+ results.length,
+			total: total,
+			result: results,
+			comment: comments
+		});
+	});	
+});
+
+
+router.post('/mywriting', function(req, res, next) {
+	var univId = parseInt(req.body.univId);
+//	var	tab = parseInt(req.params.tab);	//0:재학생 글들 00~01, 1: 졸업생 글 10~11
+	var start = parseInt(req.body.start),
+		display = parseInt(req.body.display),
+		reqDate = req.body.reqDate;
+	var total = 0;
+//	var typeArr = [];
+//	if(tab !== undefined && tab === 0){ 
+//		typeArr.push("00"); typeArr.push("01");
+//	} else {
+//		typeArr.push("10"); typeArr.push("11");
+//	}
+//	if(typeArr === null || typeArr === undefined) return next(new Error('TYPE_ARR_UNDEFINED_ERROR'));
+	var word = req.body.word;
+	var userId = parseInt(req.body.userId);
+//	console.log("req.body", req.body);
+	if(!req.body.userId || !req.body.univId) {return res.send({error:true, message:'args undefined error'});}
+	async.waterfall([ function(callback){ 
+		//total리턴을 위한 카운트 연산. count()콜백안에 async를 넣어도 되지만 가독성이 떨어져서 async 첫 번째 콜에 둠.
+		console.time('TIMER-mycount');
+		var query = Board.count();
+//		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
+		query.and([ {"univId": univId}, {"writer": userId} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.exec(function(err, count){
+			if(err) callback(err, null);
+			if(count === 0) {
+				console.log("board_count_is_zero");
+				console.timeEnd('TIMER-mycount');
+				callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			} else {
+				console.timeEnd('TIMER-mycount');
+				total = count;
+				callback(null, count);	
+			}
+		});
+	}, function(count, callback){
+		var query = Board.find();
+//		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
+//		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
+		query.and([ {"univId": univId}, {"writer": userId} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.select({__v:0});
+		query.sort({ "_id": -1});
+		query.skip(start * display);
+	 	query.limit(display);
+		query.exec(function(err, results){
+			if(err) callback(err, null);
+//			console.log(results);
+			if(results.length === 0) callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			var ids = [];
+			for(i=0; i< results.length; i++){
+				ids.push(results[i].commentId);
+			}
+			callback(null, results, ids);
+		});		
+	}, function(results, ids, callback){
+		//======
+//		console.log("commentIds:", ids);
+		var query = CommentThread.find();
+//		query.and([ {_id: {"$in": ids}}, {"updatedAt": {"$lte": reqDate}} ]);
+		query.and([ {_id: {"$in": ids}}]);
+		query.select({__v:0, title:0});
+		query.sort({ "_id": -1});
+//		query.sort({ "replies.updatedAt": -1});
+//		query.skip(start * display);
+//	 	query.limit(3);
+		query.exec(function(err, docs){
+			//검색된 보드 중 코멘트가 하나도 없으면 docs === [];
+//			console.log("docs", docs);
+			callback(null, results, docs);
+		});
+		//===================
+		
+	}], function(err, results, comments){
+		if(err){
+			if(err.message === 'HAS_NO_BOARD_ITEM'){
+				return res.send({ error: false, message: err.message});
+			} else { 
+				return next(err); 
+			}
+		}
+		res.send({
+			error:false, 
+			message: 'univId: '+univId+' myWriting List: '+ results.length,
+			total: total,
+			result: results,
+			comment: comments
+		});
+		//finally...
+		
+	});	
+});
+
+router.post('/mywriting/search', function(req, res, next) {
+	var univId = parseInt(req.body.univId);	//parseInt한건 routing이 꼬여서 에러 찾다가 수정함. /list/mywriting/search하면 라우팅 꼬임
+//	var	tab = parseInt(req.params.tab);	//0:재학생 글들 00~01, 1: 졸업생 글 10~11
+	var start = parseInt(req.body.start),
+		display = parseInt(req.body.display),
+		reqDate = req.body.reqDate;
+	var total = 0;
+	var word = req.body.word;
+	var userId = parseInt(req.body.userId);
+	if(!req.body.userId || !req.body.univId) {return res.send({error:true, message:'args undefined error'});}
+	async.waterfall([ function(callback){ 
+		//total리턴을 위한 카운트 연산. count()콜백안에 async를 넣어도 되지만 가독성이 떨어져서 async 첫 번째 콜에 둠.
+		console.time('TIMER-mycount');
+		var query = Board.count();
+		query.and([ {"univId": univId}, {"writer": userId} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.exec(function(err, count){
+			if(err) callback(err, null);
+			if(count === 0) {
+				console.log("board_count_is_zero");
+				console.timeEnd('TIMER-mycount');
+				callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			} else {
+				console.timeEnd('TIMER-mycount');
+				total = count;
+				callback(null, count);	
+			}
+		});
+	}, function(count, callback){
+		var query = Board.find();
+		query.and([ {"univId": univId}, {"writer": userId} ]);
+		if(req.body.word){
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+		}
+		query.select({__v:0});
+		query.sort({ "_id": -1});
+		query.skip(start * display);
+	 	query.limit(display);
+		query.exec(function(err, results){
+			if(err) callback(err, null);
+			if(results.length === 0) callback(new Error('HAS_NO_BOARD_ITEM'), null);
+			var ids = [];
+			for(i=0; i< results.length; i++){
+				ids.push(results[i].commentId);
+			}
+			callback(null, results, ids);
+		});		
+	}, function(results, ids, callback){
+		var query = CommentThread.find();
+		query.and([ {_id: {"$in": ids}}]);
+		query.select({__v:0, title:0});
+		query.sort({ "_id": -1});
+		query.exec(function(err, docs){
+			callback(null, results, docs);
+		});
+	}], function(err, results, comments){
+		if(err){
+			if(err.message === 'HAS_NO_BOARD_ITEM'){
+				return res.send({ error: false, message: err.message});
+			} else { 
+				return next(err); 
+			}
+		}
+		res.send({
+			error:false, 
+			message: 'univId: '+univId+' myWriting List: '+ results.length,
+			total: total,
+			result: results,
+			comment: comments
+		});
+	});	
+});
+
+
 
 router.post('/write', function(req, res, next) {
 //	console.log('req.session.pageId: ', req.session.pageId);
@@ -162,16 +591,13 @@ router.post('/write', function(req, res, next) {
 		return next(new Error('board args undefined error'));
 	} 
 	var type = "";
-	async.waterfall([ function(callback){
+	async.waterfall([function(callback){
 		User.find({ userId : req.body.writer }, function(err, users) {
 			var newUser = {
 				username : users[0].username,
 				deptname : users[0].univ[0].deptname,
-				enterYear : users[0].univ[0].enterYear,
-				pic : users[0].pic
+				enterYear : users[0].univ[0].enterYear
 			};
-//			type += ""+users[0].univ[0].isGraduate;
-//			type = type +""+req.body.type;
 			type = ""+req.body.type;
 			console.log("write type", type);
 			var info = {
@@ -183,9 +609,13 @@ router.post('/write', function(req, res, next) {
 				body : req.body.body,
 				likes : [],
 				commentId : ObjectID(),
-				user : newUser
+				user : newUser,
+				pic : []
 			};
-			callback(null,info);
+			if(req.body.pic){
+				info.pic.push(req.body.pic);
+			}
+			callback(null, info);
 		});
 	}, function(info, callback){
 		var board = new Board(info);
@@ -201,9 +631,7 @@ router.post('/write', function(req, res, next) {
 			message: "saved "+doc.boardId,
 			result: doc
 		});
-		
 	});
-			
 });
 
 
@@ -253,8 +681,10 @@ router.get('/:boardId', function(req, res, next) {
 		if (err) return next(err);
 		Board.find({"boardId": boardId},{__v: 0}, function (err, docs) {
 			if(err) return next(err);
-			if(docs.length !== 1) return res.send({error: false, message: 'DOCS_LENGTH_ERROR'});
-			
+			if(docs.length !== 1){
+				console.log("length error");
+				return res.send({error: false, message: 'DOCS_LENGTH_ERROR'});
+			}
 			var query = CommentThread.find();
 			query.and([ {_id: docs[0].commentId}]);
 			query.select({__v:0, title:0});
@@ -300,28 +730,85 @@ router.get('/update/:page/:boardId', function (req, res, next) {
 	});
 });
 
-router.post('/update', function (req, res, next) {
+router.put('/write', function (req, res, next) {
 	console.log('req.body:', req.body);
 	var boardId = req.body.boardId;
-	var info = { updatedAt: Date.now() };
-	if(req.body.univId)	info.univId = req.body.univId;
-	if(req.body.writer)	info.writer = req.body.writer;
-	if(req.body.pageId)	info.pageId = req.body.pageId;
-	if(req.body.type)	info.type = req.body.type;
-	if(req.body.title)	info.title = req.body.title;
-	if(req.body.body)	info.body = req.body.body;
-	if(req.body.likes)	info.likes = req.body.likes;
+	if(!boardId){
+		return res.send({error: true, message:'boardId undefined error'});
+	}
+	var pageId = req.body.pageId;
+	var univId = req.body.univId;
+	var writer = req.body.writer;
+	var type = req.body.type;
+	var title = req.body.title;
+	var body = req.body.body;
+	var pic = req.body.pic;
 	
-	var board = info;
-
-	Board.update({ "boardId" : boardId }, {$set : board}, function (err, doc) {
-		if (err) return next(err);
-		if (doc.n == 1){
-			res.send({success:1, msg: 'updates complete', result: doc});
-		} else {
-			res.send({success:0, msg: 'failed to updates', result: null});
+	Board.find({"boardId": boardId}, function(err, docs){
+		if(err){
+			err.code = 500;
+			return next(err);
 		}
+		if(!docs){
+			return res.send({error: true, message: 'board is not exists'});
+		}
+		if(pageId){
+			docs[0].pageId = pageId;
+		}
+		if(univId){
+			docs[0].pageId = univId;
+		}
+		if(writer){
+			docs[0].writer = writer;
+		}
+		if(type){
+			docs[0].type = type;
+		}
+		if(title){
+			docs[0].title = title;
+		}
+		if(body){
+			docs[0].body = body;
+		}
+		if(pic){
+			docs[0].pic[0] = pic;
+		} else { 
+			docs[0].pic = [];
+		}
+		docs[0].updatedAt = Date.now();
+		docs[0].save().then(function fullfilled(result){
+			console.log("writeResult", result);
+			res.send({
+				error: false,
+				message: 'board info has Successfully updated',
+				result: result
+			});
+		}, function rejected(err){
+			res.send({
+				error: true,
+				message: 'An error occurred while board updating'
+			});
+		});
 	});
+	
+//	var boardId = req.body.boardId;
+//	var info = { updatedAt: Date.now() };
+//	if(req.body.pageId)	info.pageId = req.body.pageId;
+//	if(req.body.univId)	info.univId = req.body.univId;
+//	if(req.body.writer)	info.writer = req.body.writer;
+//	if(req.body.type)	info.type = req.body.type;
+//	if(req.body.title)	info.title = req.body.title;
+//	if(req.body.body)	info.body = req.body.body;
+//	if(req.body.likes)	info.likes = req.body.likes;
+//	var board = info;
+//	Board.update({ "boardId" : boardId }, {$set : board}, function (err, doc) {
+//		if (err) return next(err);
+//		if (doc.n == 1){
+//			res.send({error:false, message: 'updates complete', result: doc});
+//		} else {
+//			res.send({error:true, message: 'failed to updates'});
+//		}
+//	});
 });
 
 router.post('/like', function (req, res, next) {
@@ -347,7 +834,7 @@ router.post('/like', function (req, res, next) {
 				request({
 					method: 'POST',
 					uri: config.host + '/users/' + to + '/message',
-					headers: { 'Content-Type' : 'application/json' },
+					headers: { 'Content-Type' : 'application/json; charset=utf-8' },
 					body: JSON.stringify({
 						reqDate: reqDate,
 						user_id: userId,
@@ -404,17 +891,34 @@ router.post('/dislike', function (req, res, next) {
 	}
 });
 
-router.post('/delete', function (req, res, next) {
-	var page = req.body.page;
+router.post('/remove', function (req, res, next) {
+//	var page = req.body.page;
 	var boardId = req.body.boardId;
-
-	Board.remove({"boardId" : boardId}, function (err, doc) {
-		if (err) {return next(err);}
-		console.log('doc', doc);
+	var writer = req.body.writer;
+	
+	CommentThread.remove({"boardId" : boardId}, function(err, doc){
+		if(err) {return res.send({error: true, message: 'error occuerred while removing commentthread item'});}
 		if (doc.result.n === 1 ){
-			res.send({success:1, msg: 'remove complete', result: doc});
-		} else {
-			res.send({success:0, msg: 'failed to remove', result: null});
+			Board.remove({"boardId" : boardId, "writer": writer}, function (err, doc) {
+				if (err) {return res.send({error: true, message: 'error occuerred while removing board item'});}
+//				console.log('doc', doc);
+				if (doc.result.n === 1 ){
+					res.send({error: false, message: 'remove complete'});
+				} else {
+					res.send({error: true, message: 'failed to remove'});
+				}
+			});
+		} else {//코멘트쓰레드가 없는경우
+//			res.send({error: true, message: 'failed to remove thread'});
+			Board.remove({"boardId" : boardId, "writer": writer}, function (err, doc) {
+				if (err) {return res.send({error: true, message: 'error occuerred while removing board item'});}
+//				console.log('doc', doc);
+				if (doc.result.n === 1 ){
+					res.send({error: false, message: 'remove complete'});
+				} else {
+					res.send({error: true, message: 'failed to remove'});
+				}
+			});
 		}
 	});
 });

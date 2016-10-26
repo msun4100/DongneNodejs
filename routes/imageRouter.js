@@ -22,7 +22,7 @@ var multer  = require('multer'),
 var uploadDir = __dirname + '/uploads',
 	imageDir = __dirname + '/images';
 
-router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),function (req,res,next) {
+router.post('/updatePic/user/:userId', multer({dest:'./uploads'}).single('photo'),function (req,res,next) {
 	
 	console.log("req.file:", req.file);
 	console.log("req.body", req.body);
@@ -101,7 +101,7 @@ router.post('/updatePic/:userId', multer({dest:'./uploads'}).single('photo'),fun
 	});
 });
 
-router.get('/getPic/:userId/:size',function (req, res, next) {
+router.get('/getPic/user/:userId/:size',function (req, res, next) {
 	var userId = req.params.userId,
 		size = req.params.size;	//'small' or 'large'
 	if(size === undefined || userId === undefined) return res.send({error: true, message: ' args error'});
@@ -132,7 +132,7 @@ router.get('/getPic/:userId/:size',function (req, res, next) {
 });
 
 function getDefaultImg(req, res, msg){
-    var path = __dirname + "/images/icon.png"; // 
+    var path = __dirname + "/images/e__who_icon.png"; // 
     fs.access(path, function(err) {
        if ( err ) {
     	   console.log("getDefaultImg func error occurred");

@@ -89,28 +89,35 @@ router.post('/chat_rooms', [mUtil.requireAuthentication], function(req, res, nex
 	 * Fetches request chat roomList
 	 * params: roomList
 	*/
-	var roomList = req.body.roomList;
-	
-	if(roomList !== undefined) {
-		if(!(roomList instanceof Array)){
-			roomList = [roomList];
+	var item;
+	var roomList = [];
+	for (var key in req.body) {
+		if (req.body.hasOwnProperty(key)) {
+			// key === user_id, room_name 등
+			item = req.body[key];
+//			console.log(item);	
+			var sub = key.substring(0, 8);
+			if(sub === "roomList"){
+				roomList.push(item);
+			}
 		}
-		dbHandler.getJoinedChatRooms(roomList)
-		.then(function (datas) {
-			res.send(datas);
-		},function (error) {
-			console.log('getJoinedChatRooms Error:', error);
-			res.send({
-				error:true, 
-				message:"Failed to getJoinedChatRooms"
-			});
-		});
-	} else {
-		res.send({
-			error: true,
-			message: 'roomList undefined error'
-		});
 	}
+	console.log("roomList: ", roomList);
+	if(roomList.length === 0){
+		return res.send({error: true, message: "roomList length error"});
+	}
+
+	dbHandler.getJoinedChatRooms(roomList)
+	.then(function (datas) {
+		res.send(datas);
+	},function (error) {
+		console.log('getJoinedChatRooms Error:', error);
+		res.send({
+			error:true, 
+			message:"Failed to getJoinedChatRooms"
+		});
+	});
+	
 });
 
 //used at GcmChatFragment
@@ -313,7 +320,7 @@ router.post('/users/:id/message', function(req, res, next){
 			image:''
 		};
 		var push = new Push("학교 사람들", pushData, false, flag);
- 
+			
 		gcm.send(to_user.gcm_registration_id, push)
 		.then(function(body){
 			console.log('gcm body:', body);
@@ -326,6 +333,7 @@ router.post('/users/:id/message', function(req, res, next){
 			res.setHeader('content-type', 'application/json; charset=utf-8');
 			res.send(JSON.stringify(response));
 		});
+		
 	});
 	
 	function task1(callback){

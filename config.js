@@ -4,8 +4,8 @@ var config = {
 	secret: 'secret',
 	redisPort: 6379,
 //	redisHost: 'localhost',
-	redisHost: 'ec2-52-78-27-16.ap-northeast-2.compute.amazonaws.com',
-	redisUrl: 'redis://ec2-52-78-27-16.ap-northeast-2.compute.amazonaws.com',
+	redisHost: 'ec2-52-78-76-64.ap-northeast-2.compute.amazonaws.com',
+	redisUrl: 'redis://ec2-52-78-76-64.ap-northeast-2.compute.amazonaws.com',
 	routes: {
 		login: '/account/login',
 		logout: '/account/logout',
@@ -84,6 +84,7 @@ var config = {
 		smallImgName: "user_:userId_small",
 	    small: { width: 120, height: 120},
 	    large: { width: 348, height: 348},
+	    board: { width: 348, height: 348}
 	}
 };
 

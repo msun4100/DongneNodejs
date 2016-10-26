@@ -15,6 +15,71 @@ var User = require('../db_models/userModel'),
 router.get('/comments/get/:objectId', getCommentRoutes);
 router.post('/comments/add', addCommentRoutes);
 
+router.post('/comments', getMyComments);
+function getMyComments(req, res, next) {
+	var userId = parseInt(req.body.userId);
+	var start = req.body.start;
+	var display = req.body.display;
+
+	console.time('find replies');
+	CommentThread.find({ "replies.userId": userId})
+	.sort({"_id": -1})
+	.exec(function(err, comment) {
+		if(err) {return next(err);}
+		if (!comment) {
+			res.json(404, {
+				error: true,
+				message : 'CommentThread Not Found.'
+			});
+		} else {
+			var list = [];
+			var i,j;
+			comment.forEach(function(value, index){
+//				console.log(""+index+":");
+				if(value.replies){
+					var reps = value.replies;
+					for(i=0; i<reps.length; i++){
+						if(reps[i].userId === userId){
+							var copy = JSON.parse(JSON.stringify( reps[i] ));	//deep copy
+							copy.boardId = value.boardId;
+							list.push(copy);
+						} 
+					}
+				}
+			});
+			var newList = [];
+			if(start && display && list){
+				var skip = start * display;
+				var len = 0;
+				while(len < display){
+					var index = skip + len;
+					if(index >= list.length){ break; }
+					newList.push(list[index]);
+					len++;
+				}
+			}
+			if(newList.length === 0){
+				res.send({
+					error: false, 
+					message: 'HAS_NO_REPLIES_ITEM',
+					total: list.length
+				});
+			} else {
+				res.send({
+					error: false, 
+					message: 'CommentThread Found.',
+					total: list.length,
+					result: newList
+				});	
+			}
+			
+			console.timeEnd('find replies');
+
+		}
+	});
+}
+
+
 //findById를 쓰면 createFrom... 안하고 그냥 스트링 넣을 수 있음
 function getCommentRoutes(req, res, next) {
 	var objectIdString = req.params.objectId;

@@ -27,6 +27,7 @@ exports.requireAuthentication = function requireAuthentication(req, res, next){
 exports.logOut = function logOut(req){
 	req.session.isAuthenticated = false;
 	req.logout();
+	req.session.destroy();
 };
 
 exports.templateRoutes = function templateRoutes(req, res, next){

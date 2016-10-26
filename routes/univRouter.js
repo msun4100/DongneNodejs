@@ -15,6 +15,32 @@ router.get('/univ', showUnivs);
 //router.post('/friends/:status', updateFriends);
 router.post('/univ', addUnivs);
 
+router.get('/univ/:id', getUnivItem);
+function getUnivItem(req, res, next){
+	var univId = req.params.id;
+	
+	Univ.find({"univId": univId}, {_id: 0, univId: 1, univname: 1, total: 1})
+	.then(function fulfilled(docs) {
+		if(docs.length !== 0){
+			res.send({
+				error: false,
+				message: docs[0].univname + " "+docs.length,
+				result: docs
+			});
+		} else {
+			res.send({
+				error: true,
+				message: 'univ find error'
+			});
+		}
+	}, function rejected(err) {
+		res.send({
+			error: true,
+			message: err.message
+		});
+	});
+};
+
 function fsTest1(req, res, next){
 	User.emit('modifyUnivList');
 }
@@ -45,15 +71,13 @@ function fsTest2(req, res, next){
 
 function addUnivs(req, res, next){
 	var univname = req.body.univname;
-	
 	var info = {};
 	info.univname = univname;
-	info.total = 1;
-	
+	info.total = 0;
 	var univ = new Univ(info);
 	univ.save().then(function fulfilled(result){
 		   console.log(result);
-		   res.send({msg:'success', id:result._id});
+		   res.send({error: false, message: 'success' , result: [result] });	//배열로 넘겨줌
 		}, function rejected(err) {
 		   err.code = 500;
 		   next(err);      

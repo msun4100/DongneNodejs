@@ -7,6 +7,7 @@ var pool = require('./dbConfig'),
 	async = require('async'),
 	TimeStamp = require('../gcm/timeStamp');
 
+
 var createUser = function(user_id, name, email, univId){
 	return new Promise(function (resolve, reject) {
 		isUserExists(email, function(err, isExists) {
@@ -24,11 +25,11 @@ var createUser = function(user_id, name, email, univId){
 					if(user_id === -1){
 						//gcm3.0 테스트앱이 작동할때 에러 피하기 위해 임시로 넣는 코드
 						input = [name, email];
-						sql = 'INSERT INTO USERS(name, email) VALUES(?, ?)';
+						sql = 'INSERT INTO users(name, email) VALUES(?, ?)';
 					} else {
 						//my-sql auto_increment 사용시 user_id가 0이면 안들어감. 오토넘버가 생성되서 저장됨.
 						input = [user_id, name, email];
-						sql = 'INSERT INTO USERS(user_id, name, email) VALUES(?, ?, ?)';	
+						sql = 'INSERT INTO users(user_id, name, email) VALUES(?, ?, ?)';	
 					}
 				    conn.query(sql, input, function (err, results) {
 				    	if (err) {
@@ -193,7 +194,7 @@ var getChatRoomMsg = function(chat_room_id){
 		    			cmt.message = item.message;
 		                cmt.message_id = item.message_id;
 		                cmt.created_at = item.created_at;
-//		                모든메시지에 chat_room_id를 달아 보내는 것은 불필요하므로 이 요청에서는 chat_room 바디 한번만 보냄.
+//		                모든메시지에 chat_room_id를 달아 보내는 것은 불필요하므로 위 요청처럼 chat_room 바디 한번만 보냄.
 //		                cmt.chat_room_id = item.chat_room_id;
 		                
 		                var user = {};
@@ -203,28 +204,6 @@ var getChatRoomMsg = function(chat_room_id){
 		                datas.messages.push(cmt);
 //		                console.log(datas);
 		    		}
-		    		
-//		    		if(index === 0){
-//		    			var tmp = {};
-//		    			tmp['chat_room_id'] = item['chat_room_id'];
-//		    			tmp['name'] = item['name'];
-//		    			tmp['created_at'] = item['created_at'];
-//		    			datas['chat_room'] = tmp;
-//		    		}
-//		    		if(item != null){
-//		    			var cmt = {};
-//		    			cmt['message'] = item['message'];
-//		                cmt["message_id"] = item["message_id"];
-//		                cmt["created_at"] = item["created_at"];
-//		                
-//		                var user = {};
-//		                user['user_id'] = item['user_id'];
-//		                user['username'] = item['username'];
-//		                cmt['user'] = user;
-//
-//		                datas.messages.push(cmt);
-//		                console.log(datas);
-//		    		}		    		
 		    	});
 		    	conn.release();
 			    resolve(datas);
@@ -395,10 +374,6 @@ var createChatRoom = function(room_name){
 			var timeStamp = TimeStamp.getCurrentTimeStamp();
 			var input = [room_name, timeStamp];
 		    var sql = 'INSERT INTO chat_rooms (name, created_at) values(?, ?)';
-//		    var datas = {
-//        			error: false,
-//        			message: {}
-//    	    };
 		    conn.query(sql, input, function (err, result) {
 		    	if (err) { conn.release(); reject(err); }
 //		    	console.log("addChatRoom Result:", result);

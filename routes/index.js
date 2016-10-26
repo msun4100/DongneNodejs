@@ -1,7 +1,8 @@
 var util = require('../middleware/utilities'),
 	config = require('../config'),
 	user = require('../passport/user');
-var User = require('../db_models/userModel');
+var User = require('../db_models/userModel'),
+	Univ = require('../db_models/universityModel');
 
 module.exports.index = index;
 module.exports.login = login;

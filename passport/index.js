@@ -37,22 +37,31 @@ passport.use(new local({
 			if(profile)	{
 				passwordUtils.passwordCheck(password, profile.password, profile.salt, profile.work, function(err, isAuth){
 					if(isAuth) {
+						var isChange = false;
 						if (profile.work < config.crypto.workFactor) {
 							User.updatePassword(email, password, config.crypto.workFactor, function(err, profile){
 								console.log('password Changed on workFactor');
 							});
 						}
-						if (req.body.pushId !== profile.pushId) {
-							profile.pushId = req.body.pushId;
-							profile.save().then(function fulfilled(result) {
-								console.log('pushId Changed');
-							}, function rejected(err) {
-								log.debug({message: 'PushId Change callback error', pushId: req.body.pushId});
-								console.log('pushId Change Error');
-							});
+						if (req.body.pushId !== undefined && req.body.pushId !== profile.pushId) {
+							profile.pushId = req.body.pushId; isChange = true;
 						}
 						if(req.body.univId !== null || req.body.univId !== undefined){
-							profile.univId = req.body.univId;
+							profile.univId = req.body.univId;	isChange = true;
+						}
+						if(req.body.lon){
+							profile.location.lon = req.body.lon;	isChange = true;
+						}
+						if(req.body.lat){
+							profile.location.lat = req.body.lat;	isChange = true;
+						}
+						if(isChange){
+							profile.save().then(function fulfilled(result) {
+//								console.log('pushId Changed');
+							}, function rejected(err) {
+								log.debug({message: 'PushId Change callback error', pushId: req.body.pushId});
+//								console.log('pushId Change Error');
+							});	
 						}
 						done(null, profile);
 					} else {

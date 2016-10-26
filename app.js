@@ -63,6 +63,8 @@ app.use(require('./routes/deptRouter'));
 app.use(require('./routes/imageRouter'));	//for image upload tests
 app.use(require('./routes/friendRouter'));
 app.use(require('./routes/commentRouter'));
+app.use(require('./routes/userRouter'));
+app.use(require('./routes/reportRouter'));
 
 app.use(errorHandlers.error);
 app.use(errorHandlers.notFound);
