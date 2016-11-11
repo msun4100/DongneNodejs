@@ -10,6 +10,8 @@ var async = require('async');
 var request = require('request');
 var mUtil = require('../middleware/utilities');
 
+var ChatRoomUser = require('../db_models/chatRoomUser');
+
 router.post('/user/login', function(req, res, next){
 	/* 
 	 * User login or registration
@@ -399,7 +401,6 @@ router.post('/users/message', function(req, res, next){
 			message: message,
 			message_id: message_id,
 			chat_room_id: chat_room_id,
-//			created_at: Date.now('Y-m-d G:i:s')
 			created_at: TimeStamp.getCurrentTimeStamp()
 		};
 		var pushData = {

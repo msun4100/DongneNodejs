@@ -25,8 +25,9 @@ function editPassword(req, res, next){
 			passwordUtils.passwordCheck(password, profile.password, profile.salt, profile.work, function(err, isAuth){
 				if(isAuth) {
 					User.updatePassword(email, value, config.crypto.workFactor, function(err, profile){
+						profile.updatedAt = Date.now();
 						profile.save().then(function fulfilled(result) {
-							console.log('password Changed on workFactor');
+//							console.log('password Changed on workFactor');
 							return res.send({error: false, message: 'PW successfully changed'});
 						}, function rejected(err) {
 							log.debug({message: 'PW Change callback error', pushId: req.body.pushId});
@@ -47,7 +48,8 @@ function editPassword(req, res, next){
 
 function editUser(req, res, next) {
 	var email = req.body.email;
-	if(!email){
+	var deptname = req.body.deptname;
+	if(!email || !deptname){
 		return res.send({error: true, message:'email undefined error'});
 	}
 	var desc1 = req.body.desc1;
@@ -56,6 +58,14 @@ function editUser(req, res, next) {
 	var jobteam = req.body.jobteam;
 	var fb = req.body.fb;
 	var insta = req.body.insta;
+	console.log("req.body", req.body);
+	if(jobname && jobname === ""){
+		console.log("equals", "empty");
+	}
+	if(jobname && jobname.length === 0){
+		console.log("equals", "0");
+	}
+	
 	
 	User.findByEmail(email, function(err, doc){
 		if(err){
@@ -65,6 +75,9 @@ function editUser(req, res, next) {
 		if(!doc){
 			return res.send({error: true, message: 'email not exists'});
 		}
+		if(deptname){
+			doc.univ[0].deptname = deptname;
+		}
 		if(desc1){ 
 			doc.desc = [];
 			doc.desc.push(desc1);
@@ -73,10 +86,10 @@ function editUser(req, res, next) {
 			if(!desc1){ doc.desc = []; }
 			doc.desc.push(desc2);
 		}
-		if(jobname){
+		if(jobname || jobname === ""){
 			doc.job.name = jobname;
 		}
-		if(jobteam){
+		if(jobteam || jobteam === ""){
 			doc.job.team = jobteam;
 		}
 		if(fb){
@@ -85,9 +98,9 @@ function editUser(req, res, next) {
 			doc.sns.push(info);
 		}
 		if(insta){
-			if(!fb) doc.sns = [];
-			var info = { url: insta, sns: "insta"};
-			doc.sns.push(info);
+			if(!fb) {doc.sns = [];}
+			var info2 = { url: insta, sns: "insta"};
+			doc.sns.push(info2);
 		}
 		doc.updatedAt = Date.now();
 		doc.save().then(function fulfilled(result) {

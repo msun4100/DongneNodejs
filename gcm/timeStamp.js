@@ -20,12 +20,20 @@
 
 module.exports.getCurrentTimeStamp = function() {
 	var d = new Date(),
+//	dformat = [d.getFullYear(),
+//	           d.getMonth()+1,
+//	           d.getDate() ].join('-')+' '+
+//	          [d.getHours(),
+//	           d.getMinutes(),
+//	           d.getSeconds()].join(':');
+	
 	dformat = [d.getFullYear(),
 	           d.getMonth()+1,
-	           d.getDate() ].join('-')+' '+
+	           d.getDate() ].join('-')+'T'+
 	          [d.getHours(),
 	           d.getMinutes(),
-	           d.getSeconds()].join(':');
-//	console.log("timeStamp.js->dfotmat:", dformat);
+	           d.getSeconds()].join(':')+'.'+
+	           d.getMilliseconds()+'Z';
 	return dformat;	
 };
+

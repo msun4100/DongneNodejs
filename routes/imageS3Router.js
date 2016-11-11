@@ -95,6 +95,65 @@ router.get('/getPic/user/:userId/:size',function (req, res, next) {
     }).pipe(res);
 });
 
+router.delete('/deletePic/user/:userId',function (req, res, next) {
+	var id = req.params.userId;
+	if(!req.params.userId){
+		return res.send({error: true, message: 'params length error'});
+	}
+	var files = [];
+	var file1 = {};
+	file1.filename = "";
+	file1.filename = "user_" + id + "_small";
+	files.push(file1);
+	var file2 = {};
+	file2.filename = "";
+	file2.filename = "user_" + id + "_large";
+	files.push(file2);
+	
+	var s3 = new AWS.S3();
+	
+	async.each(files, function iterator(file, callback) {
+//	    var copyParams = {
+//	        Bucket: 'schooler.image',
+//	        CopySource: 'schooler.image/' + file.filename,
+//	        Key: 'copy/'+file.filename
+//	    };      
+	    var deleteParam = {
+	        Bucket: 'schooler.image',
+	        Key: file.filename
+	    };
+//	    s3.copyObject(copyParams, function(err, data) {
+//	        if (err) { callback(err); }
+//	        else {
+//	            s3.deleteObject(deleteParam, function(err, data) {
+//	                if (err) { callback(err); }
+//	                else {
+//	                    console.log('delete', data);
+//	                    callback(null, data);
+//	                }
+//	            });
+//	        }
+//	    });
+        s3.deleteObject(deleteParam, function(err, data) {
+        	if (err) { callback(err); }
+        	else {
+        		console.log('delete', data);
+        		callback(null, data);
+        	}
+        });
+	}, function allDone(err, data) {
+	    //This gets called when all callbacks are called
+	    if (err) {
+	    	console.log(err, err.stack);
+	    	res.send({error: true, message: err.message});
+	    }
+	    else {
+	    	res.send({error: false, message: 'All done'});
+	    }
+	});	
+});
+
+
 function getDefaultImg(req, res, msg){
     var path = __dirname + "/images/e__who_icon.png"; // 
     fs.access(path, function(err) {

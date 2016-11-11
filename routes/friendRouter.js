@@ -23,6 +23,8 @@ router.post('/friends/univ/:univId/my', postMyFriends);
 router.get('/friends/status/:userId', getStatus);
 router.post('/friends/univ/:univId/search', postSearchUnivUsers);
 
+router.get('/chat_rooms/list', getMyAllFriendsList);
+
 
 function removeFriends(req, res, next){
 	var userId = req.params.userId;
@@ -79,7 +81,7 @@ router.post('/friends/test/reqdate', function(req,res,next){
 	console.log(req.body);
 //	4990번째 유저보다 늦게 가입한 친구들 찾기 --> 9명 검색 됨 4991~ 4999
 //	userId: 4990의 updatedAt --> 2016-07-21T09:01:51.564Z
-	User.find({"updatedAt": {"$gt": '2016-07-21T09:01:51.564Z'}}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+	User.find({"updatedAt": {"$gt": '2016-07-21T09:01:51.564Z'}}, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 })
 	.sort({username: 1})
 	.skip(start * display)
 	.limit(display).exec(function(err, users){
@@ -280,7 +282,7 @@ function showUnivUsers(req, res, next) {
 	        function (callback) {
 	        	//전체 대학교 유저리스트
 	        	console.time('TIMER');	//실행시간 체크 스타트
-	        	User.find({"univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+	        	User.find({"univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 })
 	        	.sort({username: 1}).limit(30).exec(function(err, users){
 	        		if(err) callback(err, null);
 	        		else callback(null, users);
@@ -368,9 +370,9 @@ function postUnivUsers(req, res, next) {
 	        function(callback) {
 	        	//전체 대학교 유저리스트
 //	        	console.time('TIMER');	//실행시간 체크 스타트
-//	        	User.find({"univ.univId": univId, "updatedAt": {"$lte": reqDate}}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+//	        	User.find({"univ.univId": univId, "updatedAt": {"$lte": reqDate}}, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 })
 //	        	console.time('TIMER-ne');
-	        	User.find({"userId": {"$ne": user.userId}, "univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 })
+	        	User.find({"userId": {"$ne": user.userId}, "univ.univId": univId}, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 })
 //	        	.sort({username: 1})
 	        	.sort(sortObj)
 	        	.skip(start * display)
@@ -441,7 +443,7 @@ function postUnivUsers(req, res, next) {
 			function (err, list) { 
 				if(err) { res.send({ error: true, message: err.message}); }
 				else{
-					User.find({userId: user.userId}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 }, function(err, users){
+					User.find({userId: user.userId}, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 }, function(err, users){
 //						console.timeEnd('TIMER');
 						if(err) { res.send({ error: true, message: err.message}); }
 						else {
@@ -480,8 +482,8 @@ function postMyFriends(req, res, next) {
 		query.exec(function(err, count){
 			if(err) callback(err, null);
 			if(count === 0) { 
-				console.log("postMyFriends_count_is_zero");
-				return callback(new Error('postMyFriends_count_is_zero'), null);
+				console.log("postMyFriends_count_zero");
+				return callback(new Error('postMyFriends_count_zero'), null);
 			}
 			callback(null, count);
 		});
@@ -502,7 +504,7 @@ function postMyFriends(req, res, next) {
 					ids.push(results[i].from);	
 				}
 			}
-			User.find({ "userId": {$in: ids} }, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 },
+			User.find({ "userId": {$in: ids} }, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 },
 					{"sort": {username: 1}}, function(err, users){
 						//users === target_user_id와 친구인. 리스트
 						//이제 나랑 친구인 유저를 구분
@@ -607,7 +609,7 @@ function postMyFriends(req, res, next) {
 	}], function(err, count, users, sameCnt){
 		if(err){ return res.send({error: true, message: err.message}); }
 		
-		User.find({userId: target_user_id}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 }, function(err, mUser){
+		User.find({userId: target_user_id}, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 }, function(err, mUser){
 			if(err) { return res.send({ error: true, message: err.message}); }
 			if(!mUser || mUser.length === 0) { return res.send({ error: true, message: 'target_user_find_error'}); }
 			
@@ -635,6 +637,53 @@ function postMyFriends(req, res, next) {
 	});
 }
 
+function getMyAllFriendsList(req, res, next) {
+	var user = req.user;
+	//==================
+	async.waterfall([ function(callback){
+		var query = Friend.find();
+		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ]);
+		query.select({__v: 0, _id: 0});
+		query.exec().then(function fulfilled(results) {
+			var ids = [];
+			var status = [];
+			var i, j;
+			//results == 나랑 status가 1인 생성된 리스트
+			for(i=0; i < results.length; i++){
+				if(results[i].from === user.userId){
+					ids.push(results[i].to);
+				} else if(results[i].to === user.userId){
+					ids.push(results[i].from);
+				}
+			}
+			callback(null, ids);
+		}, function rejected(err) {
+			callback(err, null);
+		});		
+	}], function(err, ids){
+		if(err){ return res.send({error: true, message: err.message}); }
+		User.find({userId: {"$in": ids}}, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 }, function(err, users){
+			if(err) { return res.send({ error: true, message: err.message}); }
+			if(!users || users.length === 0) { return res.send({ error: true, message: 'ids_find_error'}); }
+			if(users.length !== 0){
+				console.timeEnd('postAllMyFriends');
+				res.send({
+					error : false,
+					message : 'accepted all friends ' + users.length,
+					total : users.length,
+					result : users
+				});
+			} else {
+				res.send({
+					error : false,
+					message:'has no more accepted friends'
+				});	
+			}
+		});
+	});
+}
+
+
 function postSearchUnivUsers(req, res, next) {
 	var univId = req.params.univId;
 	var start = parseInt(req.body.start);
@@ -661,6 +710,7 @@ function postSearchUnivUsers(req, res, next) {
 	var user = req.user;
 	console.log("/friends/univ/:univId/search", req.body);
 	
+	console.log("start*display", start*display);
 	var total = 0;
 	async.waterfall([
 	        function(callback) {
@@ -681,7 +731,7 @@ function postSearchUnivUsers(req, res, next) {
 	        	if(req.body.job){
 	        		query.or( [{"job.name": {"$regex": new RegExp(req.body.job, 'i')}}, {"job.team": {"$regex": new RegExp(req.body.job, 'i')}} ]);
 	        	}
-	        	query.select({ _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 });
+	        	query.select({ _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 });
 	        	query.sort(sortObj);
 	        	query.skip(start * display);
 	        	query.limit(display);
@@ -762,18 +812,29 @@ function postSearchUnivUsers(req, res, next) {
 			function (err, list) { 
 				if(err) { res.send({ error: true, message: err.message}); }
 				else{
-					User.find({userId: user.userId}, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 }, function(err, users){
+					User.find({userId: user.userId}, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 }, function(err, users){
 						console.timeEnd('TIMER');
 						if(err) { res.send({ error: true, message: err.message}); }
-						else {
+//						console.log('list', list);
+//						console.log('total', total);
+						if(!list || list.length === 0) {
+							return res.send({ error: false, total: total, message: 'has no more friends', user: users[0] }); 
+						}
+						if(list.length !== 0){
 							res.send({
 								error : false,
 								total : total,
 								message : 'univ search list:'+list.length,
 								result : list,
 								user: users[0]
-							});		
-						}
+							});
+						} 
+//						else {
+//							res.send({
+//								error : false,
+//								message:'has no more friends'								
+//							});
+//						}
 					});
 				} //else
 			});
@@ -812,7 +873,7 @@ function showFriends(req, res, next){
 				}
 			}
 			User.find({ "userId":{$in: ids} }, 
-					{ _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 },
+					{ _id: 0, password: 0, salt: 0, work: 0,  __v: 0, "univ._id": 0 },
 //					{ sort: {"updatedAt": -1}}, 
 					function(err, users){
 				if(users.length !== 0){
@@ -861,7 +922,7 @@ function showFriends(req, res, next){
 				}
 			}
 			User.find({ "userId":{$in: ids} }, 
-					{ _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 },
+					{ _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 },
 //					{ sort: {"updatedAt": -1}}, 
 					function(err, users){
 				if(users.length !== 0){
@@ -896,11 +957,11 @@ function showFriends(req, res, next){
 //	 	query.where('friends').gt(6);
 //		query.or([{from: 3},{to: 3}]);
 //		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {actionUser: user.userId}, {status: 2}  ])
-		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ])
+		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ]);
 //		query.where('userId').in( friends );
 //	 	query.limit(10);
 		query.select({__v: 0, _id: 0});
-//		query.sort({ userId: 1});
+//		query.sort({ username: 1});
 		query.exec().then(function fulfilled(results) {
 			var i=0;
 			var ids = [];
@@ -912,21 +973,27 @@ function showFriends(req, res, next){
 					ids.push(results[i].from);	
 				}
 			}
-			User.find({ "userId": {$in: ids} }, { _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 }, function(err, users){
+			User.find({ "userId": {$in: ids} }, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 }, function(err, users){
 				if(users.length !== 0){
-					for(i=0; i < ids.length; i++){
+					for(i=0; i < users.length; i++){
 						users[i].isFriend = true;
+						users[i].status = 1;
 	    			}
-					fetchDistance(user.location, users, function(err, list){
-						if(err) return next(err);
-						res.send({
-							error : false,
-							message:'accepted friends ' + users.length,
-							total: users.length,
-							result : list
-						});						
+//					fetchDistance(user.location, users, function(err, list){
+//						if(err) {return next(err);}
+//						res.send({
+//							error : false,
+//							message:'accepted friends ' + users.length,
+//							total: users.length,
+//							result : list
+//						});						
+//					});
+					res.send({
+						error : false,
+						message:'accepted friends ' + users.length,
+						total: users.length,
+						result : users
 					});
-							
 				} else {
 					res.send({
 						error : true,
@@ -996,7 +1063,7 @@ function showFriends(req, res, next){
 				}
 			}
 			User.find({ "userId":{$in: ids} }, 
-					{ _id: 0, password: 0, salt: 0, work: 0, createdAt: 0, __v: 0, "univ._id": 0 },
+					{ _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 },
 //					{ sort: {"updatedAt": -1}}, 
 					function(err, users){
 				if(users.length !== 0){

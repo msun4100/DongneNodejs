@@ -81,7 +81,6 @@ var createUser = function(user_id, name, email, univId){
 };
 
 var updateGcmID = function(user_id, gcm_registration_id){
-	
 	return new Promise(function (resolve, reject) {
 		pool.getConnection(function (err, conn) {      
 			if (err) { reject(err); }
@@ -146,6 +145,7 @@ var getJoinedChatRooms = function(roomList){
 			if (err) { reject(err); }
 		    var sql = 'SELECT * FROM chat_rooms WHERE chat_room_id IN(';
 		    sql = generateInQuery(sql, roomList);
+		    sql += ' ORDER BY created_at DESC';
 			console.log("joinedRoom Query:", sql);
 		    conn.query(sql, function (err, rooms) {
 		    	if (err) {

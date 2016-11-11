@@ -65,6 +65,7 @@ app.use(require('./routes/friendRouter'));
 app.use(require('./routes/commentRouter'));
 app.use(require('./routes/userRouter'));
 app.use(require('./routes/reportRouter'));
+app.use(require('./routes/emailSendRouter'));
 
 app.use(errorHandlers.error);
 app.use(errorHandlers.notFound);

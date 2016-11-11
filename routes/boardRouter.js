@@ -812,7 +812,7 @@ router.put('/write', function (req, res, next) {
 });
 
 router.post('/like', function (req, res, next) {
-	console.log('/like req.body:', req.body);
+//	console.log('/like req.body:', req.body);
 	var boardId = req.body.boardId;
 	var userId = req.body.userId;
 	
@@ -869,7 +869,7 @@ router.post('/like', function (req, res, next) {
 
 
 router.post('/dislike', function (req, res, next) {
-	console.log('/dislike req.body:', req.body);
+//	console.log('/dislike req.body:', req.body);
 	var boardId = req.body.boardId;
 	var userId = req.body.userId;
 //	console.log('/like args:', userId);
