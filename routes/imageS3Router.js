@@ -146,8 +146,7 @@ router.delete('/deletePic/user/:userId',function (req, res, next) {
 	    if (err) {
 	    	console.log(err, err.stack);
 	    	res.send({error: true, message: err.message});
-	    }
-	    else {
+	    } else {
 	    	res.send({error: false, message: 'All done'});
 	    }
 	});	

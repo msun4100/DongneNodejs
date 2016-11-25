@@ -52,7 +52,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 	dist = Math.acos(dist);
 	dist = dist * 180/Math.PI;
 	dist = dist * 60 * 1.1515 * 1.609344;	//km로 환산
-//	console.log("Before Conversion:", dist);
+	console.log("Before Conversion:", dist);
 	var distance= dist;
 	if(dist < 1.0000000000000000){	//자릿수 맞춤
 		distance *= 1000;
@@ -81,8 +81,9 @@ function getDistance(lat1, lon1, lat2, lon2) {
 //console.log(distance(lat1, lon1, lat2, lon2, "K").toFixed(1));
 //console.log(distance(lat1, lon1, lat2, lon2, "m"));
 //console.log(getDistance(lat1, lon1, lat2, lon2));
-//console.log(getDistance("37.5552192", "126.936846", "35.1144951", "129.0393302"));
+//console.log(getDistance(parseFloat("37.5552192"), parseFloat("126.936846"), parseFloat("37.5573934"), parseFloat("126.9271257,") ));
 
+//37.5573934
 module.exports = function () {
 	return{
 		getDistance: getDistance

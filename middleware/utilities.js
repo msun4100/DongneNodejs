@@ -1,5 +1,7 @@
 var config = require('../config');
 var Page = require('../db_models/pageModel');
+var redis = require('redis')
+	, client = redis.createClient(config.redisPort, config.redisHost);
 //exports.csrf = function csrf(req, res, next){
 //	res.locals.token = req.csrfToken();
 //	next();
@@ -51,4 +53,23 @@ exports.checkPage = function checkPage(req, res, next){
 			return next();
 		}
 	});
+};
+
+exports.connectRedis = function connectRedis(req, res, next){
+//	if(req.method.toLowerCase() == 'get'){
+//		return next();
+//	}
+//	var pageId = req.body.pageId;
+//	Page.findOne({pageId: pageId}, function(err, doc){
+//		if(err) return next(err);
+//		if(!doc){
+//			return res.send({ success: 0, msg:'Page Not Exists', result: null});
+//		} else {
+//			res.locals.pageId = pageId;
+//			req.session.pageId = pageId;
+//			return next();
+//		}
+//	});
+    req.cache = client;
+    next();
 };

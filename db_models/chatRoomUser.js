@@ -10,8 +10,8 @@ var ChatRoomUserSchema = new Schema({
 	name: {type: String, "default": "채팅방", required: true},
 	host: {type: Number, ref: 'User', required: true},
 	users: [{type: Number, ref: 'User'}],
-    createdAt: { type: Date, "default": Date.now },
-    updatedAt: { type: Date, "default": Date.now },
+    created_at: { type: Date, "default": Date.now },
+    updated_at: { type: Date, "default": Date.now },
 
 });
 

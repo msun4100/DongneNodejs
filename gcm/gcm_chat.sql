@@ -180,4 +180,38 @@ INSERT INTO `dept` (`univ_id`, `name`) VALUES
 (2, '호텔경영학과'),
 (2, '경영학과'),
 (2, '호텔관광경영');
-  
+--end of sql queries---------------------------------------------------------------
+
+
+
+
+-- -- 채팅 관련 쿼리들 (이 부분은 복사해서 수행하면 안 됨.)
+-- -- 라스트메시지 구하기
+-- SELECT chat_room_id, message, message_id, m.created_at
+-- FROM  `messages` as m
+-- WHERE m.created_at = (select MAX(m2.created_at) from `messages` as m2 GROUP BY m2.chat_room_id HAVING m2.chat_room_id = m.chat_room_id)
+-- ORDER BY m.created_at DESC
+
+-- -- 챗룸리스트 + 라스트메시지 보내기
+-- SELECT c.chat_room_id, m.message AS last_msg, m.message_id, m.created_at
+-- FROM  `chat_rooms` as c LEFT JOIN `messages` as m ON c.chat_room_id = m.chat_room_id
+-- WHERE m.created_at = (select MAX(m2.created_at) from `messages` as m2 GROUP BY m2.chat_room_id HAVING m2.chat_room_id = m.chat_room_id)
+-- ORDER BY m.created_at DESC
+
+-- -- 언리드 카운트 구하기
+-- SELECT chat_room_id, message_id, message, created_at, COUNT( message_id ) AS unread_count
+-- FROM  `messages` 
+-- WHERE created_at >  '2016-11-11 06:25:16'
+-- GROUP BY chat_room_id
+
+-- -- 챗룸리스트 + 라스트메시지 + 언리드카운트
+-- SELECT c.chat_room_id, m.message AS last_msg, m.message_id, m.created_at
+-- FROM  `chat_rooms` as c LEFT JOIN `messages` as m ON c.chat_room_id = m.chat_room_id
+-- LEFT JOIN (SELECT chat_room_id, message_id, message, created_at, COUNT( message_id ) AS unread_count
+-- 	FROM  `messages` 
+-- 	WHERE created_at >  '2016-11-11 06:25:16'
+-- 	GROUP BY chat_room_id) as mm ON c.chat_room_id = mm.chat_room_id
+-- WHERE m.created_at = (select MAX(m2.created_at) from `messages` as m2 GROUP BY m2.chat_room_id HAVING m2.chat_room_id = m.chat_room_id) AND c.chat_room_id = 10
+-- ORDER BY m.created_at DESC
+-- -- 챗룸+라스트메시지 구하고 언리드카운트 구한 테이블을 조인해서 생성.
+-- -- 서버로 쿼리 옮길때 수정될 부분은 조인부분의 타임스탬프랑 웨어절의 c.chat_room_id = ?  

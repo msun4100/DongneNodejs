@@ -163,6 +163,31 @@ var getJoinedChatRooms = function(roomList){
 	});	
 };
 
+var getChatRoomsLastMsg = function(roomList){
+	return new Promise(function (resolve, reject) {
+		pool.getConnection(function (err, conn) {      
+			if (err) { reject(err); }
+			var sql = 'SELECT c.name, c.chat_room_id, m.message AS last_msg, m.message_id, m.created_at FROM  chat_rooms as c LEFT JOIN messages as m ON c.chat_room_id = m.chat_room_id WHERE c.chat_room_id IN (';
+		    sql = generateInQuery(sql, roomList);
+			sql += ' AND m.created_at = (select MAX(m2.created_at) from messages as m2 GROUP BY m2.chat_room_id HAVING m2.chat_room_id = m.chat_room_id) ORDER BY m.created_at DESC';
+			// console.log("getChatRoomsLastMsg Query:", sql);
+		    conn.query(sql, function (err, rooms) {
+		    	if (err) {
+		           conn.release();
+		           reject(err);
+		        }
+		    	// var datas = {
+		    	// 		error: false,
+		    	// 		chat_rooms: rooms
+			    // };
+		    	conn.release();
+			    resolve(rooms);
+		    });
+		});
+	});	
+};
+
+
 var getChatRoomMsg = function(chat_room_id){
 	//To get all Chat Messages from chat_room_id
 	return new Promise(function (resolve, reject) {
@@ -455,6 +480,7 @@ module.exports = function () {
 		updateGcmID: updateGcmID,
 		getAllChatRooms: getAllChatRooms,
 		getJoinedChatRooms: getJoinedChatRooms,
+		getChatRoomsLastMsg: getChatRoomsLastMsg,
 		getChatRoomMsg: getChatRoomMsg,
 		getChatRoomMsgByTime: getChatRoomMsgByTime,
 		addMessage: addMessage,

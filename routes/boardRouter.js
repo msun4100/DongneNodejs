@@ -11,7 +11,33 @@ var User = require('../db_models/userModel'),
 	CommentThread = require('../db_models/commentModel').CommentThread,
 	Reply = require('../db_models/commentModel').Reply,
 	Board = require('../db_models/boardModel'),
-	Main = require('../db_models/pageModel');
+	Main = require('../db_models/pageModel'),
+	TimeStamp = require('../gcm/timeStamp');
+
+router.post('/test/list/:univId/:tab', function(req, res, next){
+	var univId = parseInt(req.params.univId),
+	tab = parseInt(req.params.tab);	//0:재학생 글들 00~01, 1: 졸업생 글 10~11
+	var start = parseInt(req.body.start),
+		display = parseInt(req.body.display),
+		reqDate = req.body.reqDate;
+	var total = 0;
+	var typeArr = [];
+if(tab !== undefined && tab === 0){ 
+	typeArr.push("00"); typeArr.push("01");
+} else {
+	typeArr.push("10"); typeArr.push("11");
+}
+if(typeArr === null || typeArr === undefined) {return next(new Error('TYPE_ARR_UNDEFINED_ERROR'));}
+//var user = req.user;
+// console.log("list/:univId/:tab", req.body);
+console.log(start+"   "+display);
+//console.log(reqDate.toISOString());
+var query = Board.find();
+query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {createdAt: {"$lte": reqDate}} ]);
+query.exec(function(err, docs){
+			res.send({msg: docs.length, result:docs});
+		});
+});
 
 router.get('/list', function (req, res, next) {
 //  res.redirect('/list/1');
@@ -74,13 +100,13 @@ router.post('/list/:univId/:tab', function(req, res, next) {
 	}
 	if(typeArr === null || typeArr === undefined) return next(new Error('TYPE_ARR_UNDEFINED_ERROR'));
 //	var user = req.user;
-//	console.log("list/:univId/:tab", req.body);
+	// console.log("list/:univId/:tab", req.body);
 	async.waterfall([ function(callback){ 
 		//total리턴을 위한 카운트 연산. count()콜백안에 async를 넣어도 되지만 가독성이 떨어져서 async 첫 번째 콜에 둠.
 		console.time('TIMER-mycount');
 		var query = Board.count();
-//		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
-		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
+		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {createdAt: {"$lte":new Date(reqDate)}} ]);
+//		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
 		query.exec(function(err, count){
 			if(err) callback(err, null);
 			if(count === 0) {
@@ -94,23 +120,48 @@ router.post('/list/:univId/:tab', function(req, res, next) {
 			}
 		});
 	}, function(count, callback){
-		var query = Board.find();
-//		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
-		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
-		query.select({__v:0});
-		query.sort({ "_id": -1});
-		query.skip(start * display);
-	 	query.limit(display);
-		query.exec(function(err, results){
-			if(err) callback(err, null);
-//			console.log(results);
-			if(results.length === 0) callback(new Error('HAS_NO_BOARD_ITEM'), null);
-			var ids = [];
-			for(i=0; i< results.length; i++){
-				ids.push(results[i].commentId);
-			}
-			callback(null, results, ids);
-		});		
+		console.time("AGGREGATE");
+	    Board.aggregate(
+	    	    [
+				{"$match": { "univId": univId, type: {"$in": typeArr}, "createdAt": {"$lte": new Date(reqDate) }  }},
+//				{"$match": { "univId": univId, type: {"$in": typeArr}  }},
+	    	    {"$lookup":{"from": "users","localField":"writer", "foreignField":"userId", "as":"mUser"}}, 
+	    	    {"$project": {_id:1, boardId:1, univId:1, writer:1, pageId:1, title:1, commentId:1, preReplies:1,
+	    	    	"mUser.username":1,
+	    	    	"mUser.univ":1,
+	    	    	"mUser.updatedAt":1,
+	    	    	"mUser.pic":1,
+//	    	    	mUser: "$mUser",
+	    	    	updatedAt:1,
+	    	    	createdAt:1,
+	    	    	pic:1,
+	    	    	likes:1,
+	    	    	likeCount:1,
+	    	    	viewCount:1,
+	    	    	body:1,
+	    	    	type:1
+	    	    	}
+	    	    },
+	    	    {"$sort": {"_id": -1}},	//sort가 skip&&limit보다 먼저 와야 함.
+	    	    {"$skip": start * display },
+	    	    {"$limit": display}	
+	    	    ], function(err, results){
+	    	    	if(err) {return callback(err, null);}
+	    			if(results.length === 0) {return callback(new Error('HAS_NO_BOARD_ITEM'), null);}
+	    			var i, ids = [];
+	    			for(i=0; i< results.length; i++){
+	    				results[i].user = {};
+	    				results[i].user.username = results[i].mUser[0].username;
+	    				results[i].user.pic = results[i].mUser[0].pic;
+	    				results[i].user.updatedAt = results[i].mUser[0].updatedAt;
+	    				results[i].user.deptname = results[i].mUser[0].univ[0].deptname;
+	    				results[i].user.enterYear = results[i].mUser[0].univ[0].enterYear;
+	    				results[i].mUser = undefined;
+	    				ids.push(results[i].commentId);
+	    			}
+	    			console.timeEnd("AGGREGATE");
+	    			callback(null, results, ids);    	
+	    	    });		
 	}, function(results, ids, callback){
 		//======
 //		console.log("commentIds:", ids);
@@ -139,8 +190,8 @@ router.post('/list/:univId/:tab', function(req, res, next) {
 		}
 //		프로필 수정하면 사진이 반영 안되는 버그 있음. --> 유저가 사진 업데이트 할때 보드의 모든 게시물도 업데이트 되도록 하자. 
 //		유저 하나씩 전부 찾아서 보드에 붙이기엔 좀 무리가 있음.. 아 조인연산이 개아쉽네 진짜. 나중에 몽고디비 조인좀 알아보자.
-//		console.log("result:", results);
-//		console.log("comment:", comments);
+		// console.log("result:", results);
+		// console.log("total", total);
 		res.send({
 			error:false, 
 			message: 'univId: '+univId+' board List: '+ results.length,
@@ -176,7 +227,7 @@ router.post('/list/:univId/:tab/search', function(req, res, next) {
 //		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
 		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
 		if(req.body.word){
-			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}}, {"user.deptname": {"$regex": new RegExp(req.body.word, 'i')}} ]);
 		}
 		query.exec(function(err, count){
 			if(err) callback(err, null);
@@ -195,7 +246,7 @@ router.post('/list/:univId/:tab/search', function(req, res, next) {
 //		query.and([ {"univId": univId}, {type: {"$in": typeArr}}, {"createdAt": {"$lte": reqDate}} ]);
 		query.and([ {"univId": univId}, {type: {"$in": typeArr}} ]);
 		if(req.body.word){
-			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}} ]);
+			query.or( [{"user.username": {"$regex": new RegExp(req.body.word, 'i')}}, {"body": {"$regex": new RegExp(req.body.word, 'i')}}, {"user.deptname": {"$regex": new RegExp(req.body.word, 'i')}} ]);
 		}
 		query.select({__v:0});
 		query.sort({ "_id": -1});
@@ -593,10 +644,12 @@ router.post('/write', function(req, res, next) {
 	var type = "";
 	async.waterfall([function(callback){
 		User.find({ userId : req.body.writer }, function(err, users) {
+			if(!users[0]){ return callback(new Error('writer not found error'), null);}
 			var newUser = {
 				username : users[0].username,
 				deptname : users[0].univ[0].deptname,
 				enterYear : users[0].univ[0].enterYear
+				// pic : users[0].pic
 			};
 			type = ""+req.body.type;
 			console.log("write type", type);

@@ -52,7 +52,16 @@ app.get(config.routes.chat, [mUtil.requireAuthentication], routes.chat);
 app.get('/error', function(req, res, next){
 	next(new Error('A contrived error'));
 });
-passport.routes(app);	//함수는 앱으로 실행되고, 이 앱은 익스프레스 서버 오브젝트이다. 익스프레스는 앱이 실행되면 두 페이스북 라우트(인증 절차)들을 알게 된다.
+passport.routes(app);	//함수는 앱으로 실행되고, 이 앱은 익스프레스 서버 오브젝트. 익스프레스는 앱이 실행되면 두 페이스북 라우트(인증 절차)들을 알게 됨.
+
+
+// var redis = require('redis');
+// var client = redis.createClient(config.redisPort, config.redisHost);
+// client.on("error", function (err) { console.log("redis client Error " + err); });
+// app.use(function(req, res, next){
+//     req.cache = client;	//routing전에 레디스 클라이언트를 req.cache로 저장해서 모든 라우터가 사용할수 있게 함 
+//     next();
+// });
 
 app.use('/page', require('./routes/pageRouter'));// /page/xxx로 접속
 //app.use('/board', [mUtil.checkPage], require('./routes/boardRouter'));// /board/xxx로 접속
@@ -66,6 +75,8 @@ app.use(require('./routes/commentRouter'));
 app.use(require('./routes/userRouter'));
 app.use(require('./routes/reportRouter'));
 app.use(require('./routes/emailSendRouter'));
+
+// app.use(require('./testRedis'));
 
 app.use(errorHandlers.error);
 app.use(errorHandlers.notFound);

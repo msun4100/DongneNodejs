@@ -30,8 +30,15 @@ var UserSchema = Schema({
 	salt: {type: String},
 	work: {type: Number},
 	provider: {type: String},
-	location: { lat:{type: Number, default: 99999}, lon: {type: Number, default: 99999} },
-	
+	// location: { lat:{type: Number, default: 99999}, lon: {type: Number, default: 99999} },
+	//   "location": {
+    //       "type": "Point",
+    //       "coordinates": [
+    //         129.0393302,
+    //         35.1144951
+    //       ]
+	//   }
+	location: { "type": {type: String, default: "Point"}, "coordinates": []},
 	//for response
 	temp: {type: String, default: ""},
 	status: {type: Number, default: -1},
@@ -112,7 +119,7 @@ UserSchema.methods.addUniv = function(univ) {
 //static 은 User.xxx로 호출 method는  user = new User({}) --> user.xx 인스턴스로 호출
 UserSchema.index({ "univ.univId": 1, "univ.deptId": 1 }); 
 
-UserSchema.plugin(autoIncrement.plugin, { model: 'User', field: 'userId', startAt: 0, incrementBy: 1});
+UserSchema.plugin(autoIncrement.plugin, { model: 'User', field: 'userId', startAt: 1, incrementBy: 1});
 var User = mongoose.model('User', UserSchema);
 
 var findByUsername = function findByUsername(username, cb){

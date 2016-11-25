@@ -4,7 +4,8 @@ var express = require('express'),
 	mUtil = require('../middleware/utilities'),
 	ObjectID = require('mongodb').ObjectID,
 	config = require('../config'),
-	request = require('request');
+	request = require('request'),
+	TimeStamp = require('../gcm/timeStamp');
 
 var User = require('../db_models/userModel'),
 	Friend = require('../db_models/friendModel'),
@@ -23,7 +24,7 @@ function getMyComments(req, res, next) {
 
 	console.time('find replies');
 	CommentThread.find({ "replies.userId": userId})
-	.sort({"_id": -1})
+	.sort({"replies.updatedAt": -1})
 	.exec(function(err, comment) {
 		if(err) {return next(err);}
 		if (!comment) {
@@ -57,6 +58,7 @@ function getMyComments(req, res, next) {
 					newList.push(list[index]);
 					len++;
 				}
+				console.log(newList);
 			}
 			if(newList.length === 0){
 				res.send({

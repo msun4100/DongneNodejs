@@ -20,11 +20,11 @@ var BoardSchema = new Schema({
     createdAt: { type: Date, "default": Date.now },
     updatedAt: { type: Date, "default": Date.now },
     commentId: { type: Schema.Types.ObjectId, ref: 'CommentThread'},
-    user: {  
-    	username: {type: String, default: "name"}, 
-    	enterYear: {type: Number, default: 2000},
-    	deptname: {type: String, default: "deptname"}
-    },
+//    user: {  
+//    	username: {type: String, default: "name"}, 
+//    	enterYear: {type: Number, default: 2000},
+//    	deptname: {type: String, default: "deptname"}
+//    },
     preReplies:[]	//변수만 설정. 이렇게 안만들어 놓으면 안붙음.
 });
 

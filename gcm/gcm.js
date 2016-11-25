@@ -33,7 +33,7 @@ var sendMultiple = function(registration_ids, message){
 };
 
 var sendPushNotification = function(fields){
-	console.log("fields:", fields);
+	// console.log("fields:", fields);
 	return new Promise(function (resolve, reject) {
 		request({
 			method : 'POST',
@@ -53,12 +53,10 @@ var sendPushNotification = function(fields){
 //				"time_to_live" : 108
 //			})
 		}, function(error, response, body) {
-			if(error) reject(error);
-//			console.log("gcm Error:", error);
-//			console.log("gcm response:", response);
-//			console.log("gcm body:", body);
-			resolve(body);
-//			callback({ 'response' : "Success" });
+			if(error) {reject(error);}
+			else {
+				resolve(body);
+			}
 		});					
 	});
 };

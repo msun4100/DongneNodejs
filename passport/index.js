@@ -49,20 +49,19 @@ passport.use(new local({
 						if(req.body.univId !== null || req.body.univId !== undefined){
 							profile.univId = req.body.univId;	isChange = true;
 						}
-						if(req.body.lon){
-							profile.location.lon = req.body.lon;	isChange = true;
-						}
-						if(req.body.lat){
-							profile.location.lat = req.body.lat;	isChange = true;
+						if(req.body.lon && req.body.lat){
+							profile.location.coordinates = [parseFloat(req.body.lon), parseFloat(req.body.lat)];
+							isChange = true;
 						}
 						if(isChange){
 							profile.save().then(function fulfilled(result) {
-//								console.log('pushId Changed');
+//								console.log("save result",result);
 							}, function rejected(err) {
 								log.debug({message: 'PushId Change callback error', pushId: req.body.pushId});
 //								console.log('pushId Change Error');
 							});	
 						}
+//						console.log("passport3333333", profile);
 						done(null, profile);
 					} else {
 						log.debug({message: 'Wrong Username or Password', username: email});
@@ -126,7 +125,33 @@ passport.use(new local({
 //}));
 
 passport.serializeUser(function(user, done){
-	done(null, user);
+//	console.log("serial.. user", user);
+	//session에 저장되는 req.user에 패스워드랑 비번팩터 등의 정보를 빼기 위해 새로 유저를 넣음
+	var sUser = {
+			univ: user.univ,
+			job: user.job,
+			desc: user.desc,
+			sns: user.sns,
+			pic: user.pic,
+			createdAt: user.createdAt,
+			updatedAt: user.updatedAt,
+			location: user.location,
+			temp: user.temp,
+			status: user.status,
+//			isFriend: user.isFriend,
+//			__v: user.__v,
+			provider: user.provider,
+//			work
+//			salt
+			username: user.username,
+			pushId: user.pushId,
+//			password
+			email: user.email,
+			userId: user.userId,
+			_id: user._id
+	};
+//	done(null, user);
+	done(null, sUser);
 });
 
 passport.deserializeUser(function(user, done) {

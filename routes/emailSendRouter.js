@@ -3,7 +3,8 @@ var express = require('express'),
 	async = require('async'),
 	mUtil = require('../middleware/utilities'),
 	config = require('../config'),
-	fs = require('fs');
+	fs = require('fs'),
+	TimeStamp = require('../gcm/timeStamp');
 
 var User = require('../db_models/userModel'),
 	Friend = require('../db_models/friendModel'),
