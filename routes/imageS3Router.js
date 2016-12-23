@@ -19,86 +19,94 @@ var User = require('../db_models/userModel'),
 	Main = require('../db_models/pageModel'),
 	Movie = require('../db_models/movieModel');
 
-var multer  = require('multer'),
+var multer = require('multer'),
 	im = require('imagemagick');
 
 var uploadDir = __dirname + '/uploads',
 	imageDir = __dirname + '/images';
 
-router.post('/updatePic/user/:userId', multer({dest:'./uploads'}).single('photo'),function (req,res,next) {
+router.post('/updatePic/user/:userId', multer({ dest: './uploads' }).single('photo'), function (req, res, next) {
 	console.log("req.file:", req.file);
 	console.log("req.body", req.body);
+	if (!req.params.userId || !req.body.reqDate) {
+		return next(new Error('req.params undefined error'));
+	}
 	var userId = req.params.userId;
 	var reqDate = req.body.reqDate;
-	
 	var largeImgName = config.im.largeImgName.replace(":userId", userId);
 	var smallImgName = config.im.smallImgName.replace(":userId", userId);
-//    var largePath = __dirname + config.im.largePath + imageName;
-    var thumbPath = __dirname + config.im.thumbPath + smallImgName;
-    
-    var s3 = new AWS.S3();
-    var params = {
-            Bucket:'schooler.image',
-            Key: largeImgName,
-            ACL:'public-read',
-            Body: fs.createReadStream(req.file.path)
-    };
-    s3.upload(params, function(err, data){
-        if(err){
-        	return res.send({ error: true, message:'error occurred while s3 upload'});
-        }
-        else {
-        	var width = config.im.small.width,
-        	height = config.im.small.height;
-        	im.resize({ 
-        		srcPath: req.file.path, 
-//				srcData: fs.createReadStream(req.file.path),
-        		dstPath: thumbPath, 
-        		width: width,
-        		height : height
-        	}, function(err, stdout, stderr){
-        		if (err) { return next(err); }
-        		console.log('resized image to fit within '+ width +"*"+ height +"px");
-        		params.Key = smallImgName;
-        		params.Body = fs.createReadStream(thumbPath);
-        		s3.upload(params, function(err, data){
-        			if(err){
-        				return res.send({ error: true, message:'error occurred while s3 upload'});
-        			} else {
-        				fs.unlink(req.file.path);	//uploads 폴더에 올라간 임시파일 삭제	
-        				fs.unlink(thumbPath);	        			
-        				res.send({ error: false, message: "userId: "+ userId, result: data.Location });
-        			}
-        		});
-        	});
-        }	    
-    });
+	//    var largePath = __dirname + config.im.largePath + imageName;
+	var thumbPath = __dirname + config.im.thumbPath + smallImgName;
+
+	var s3 = new AWS.S3();
+	var params = {
+		Bucket: 'schooler.image',
+		Key: largeImgName,
+		ACL: 'public-read',
+		Body: fs.createReadStream(req.file.path)
+	};
+	s3.upload(params, function (err, data) {
+		if (err) {
+			return res.send({ error: true, message: 'error occurred while s3 upload' });
+		}
+		else {
+			var width = config.im.small.width,
+				height = config.im.small.height;
+			im.resize({
+				srcPath: req.file.path,
+				//				srcData: fs.createReadStream(req.file.path),
+				dstPath: thumbPath,
+				width: width,
+				height: height
+			}, function (err, stdout, stderr) {
+				if (err) { return next(err); }
+				console.log('resized image to fit within ' + width + "*" + height + "px");
+				params.Key = smallImgName;
+				params.Body = fs.createReadStream(thumbPath);
+				s3.upload(params, function (err, data) {
+					if (err) {
+						return res.send({ error: true, message: 'error occurred while s3 upload' });
+					} else {
+						fs.unlink(req.file.path);	//uploads 폴더에 올라간 임시파일 삭제	
+						fs.unlink(thumbPath);
+						editUsersPicField(userId, "1", reqDate, function (err, updatedAt) {
+							if (err) {
+								res.send({ error: true, message: err.message }); //이미지저장은 됐지만 유저필드 수정 실패
+							} else {
+								res.send({ error: false, message: updatedAt, result: data.Location });
+							}
+						});
+					}
+				});
+			});
+		}
+	});
 });
 
-router.get('/getPic/user/:userId/:size',function (req, res, next) {
+router.get('/getPic/user/:userId/:size', function (req, res, next) {
 	var userId = req.params.userId,
 		size = req.params.size;	//'small' or 'large'
-	if(size === undefined || userId === undefined) { return res.send({error: true, message: ' args error'}); }
+	if (size === undefined || userId === undefined) { return res.send({ error: true, message: ' args error' }); }
 	var key = "";
-	if(size.toLowerCase() === "small"){
+	if (size.toLowerCase() === "small") {
 		key = config.im.smallImgName.replace(":userId", userId);
 	}
 	else {
 		key = config.im.largeImgName.replace(":userId", userId);
 	}
-    var s3 = new AWS.S3();
-//    var file = require('fs').createWriteStream('Avata.jpg');
-    var params = {Bucket:'schooler.image', Key: key};
-    s3.getObject(params).createReadStream().on('error', function(err){
-//    	res.send({error: true, message: 'error occurred'});
-    	getDefaultImg(req, res, err.message);
-    }).pipe(res);
+	var s3 = new AWS.S3();
+	//    var file = require('fs').createWriteStream('Avata.jpg');
+	var params = { Bucket: 'schooler.image', Key: key };
+	s3.getObject(params).createReadStream().on('error', function (err) {
+		getDefaultImg(req, res, err.message);
+	}).pipe(res);
 });
 
-router.delete('/deletePic/user/:userId',function (req, res, next) {
+router.delete('/deletePic/user/:userId', function (req, res, next) {
+	var reqDate = req.body.reqDate;
 	var id = req.params.userId;
-	if(!req.params.userId){
-		return res.send({error: true, message: 'params length error'});
+	if (!req.params.userId || !req.body.reqDate) {
+		return res.send({ error: true, message: 'params length error' });
 	}
 	var files = [];
 	var file1 = {};
@@ -109,121 +117,150 @@ router.delete('/deletePic/user/:userId',function (req, res, next) {
 	file2.filename = "";
 	file2.filename = "user_" + id + "_large";
 	files.push(file2);
-	
+
 	var s3 = new AWS.S3();
-	
+
 	async.each(files, function iterator(file, callback) {
-//	    var copyParams = {
-//	        Bucket: 'schooler.image',
-//	        CopySource: 'schooler.image/' + file.filename,
-//	        Key: 'copy/'+file.filename
-//	    };      
-	    var deleteParam = {
-	        Bucket: 'schooler.image',
-	        Key: file.filename
-	    };
-//	    s3.copyObject(copyParams, function(err, data) {
-//	        if (err) { callback(err); }
-//	        else {
-//	            s3.deleteObject(deleteParam, function(err, data) {
-//	                if (err) { callback(err); }
-//	                else {
-//	                    console.log('delete', data);
-//	                    callback(null, data);
-//	                }
-//	            });
-//	        }
-//	    });
-        s3.deleteObject(deleteParam, function(err, data) {
-        	if (err) { callback(err); }
-        	else {
-        		console.log('delete', data);
-        		callback(null, data);
-        	}
-        });
+		//	    var copyParams = {
+		//	        Bucket: 'schooler.image',
+		//	        CopySource: 'schooler.image/' + file.filename,
+		//	        Key: 'copy/'+file.filename
+		//	    };      
+		var deleteParam = {
+			Bucket: 'schooler.image',
+			Key: file.filename
+		};
+		//	    s3.copyObject(copyParams, function(err, data) {
+		//	        if (err) { callback(err); }
+		//	        else {
+		//	            s3.deleteObject(deleteParam, function(err, data) {
+		//	                if (err) { callback(err); }
+		//	                else {
+		//	                    console.log('delete', data);
+		//	                    callback(null, data);
+		//	                }
+		//	            });
+		//	        }
+		//	    });
+		s3.deleteObject(deleteParam, function (err, data) {
+			if (err) { callback(err); }
+			else {
+				console.log('delete', data);
+				callback(null, data);
+			}
+		});
 	}, function allDone(err, data) {
-	    //This gets called when all callbacks are called
-	    if (err) {
-	    	console.log(err, err.stack);
-	    	res.send({error: true, message: err.message});
-	    } else {
-	    	res.send({error: false, message: 'All done'});
-	    }
-	});	
+		//This gets called when all callbacks are called
+		if (err) {
+			console.log(err, err.stack);
+			res.send({ error: true, message: err.message });
+		} else {
+			editUsersPicField(id, "0", reqDate, function (err, updatedAt) {
+				if (err) {
+					res.send({ error: true, message: err.message }); //이미지저장은 됐지만 유저필드 수정 실패
+				} else {
+					// res.send({ error: false, message: 'All done' });
+					res.send({ error: false, message: updatedAt });
+					// res.send({ error: false, message: "userId: " + userId, result: data.Location });
+				}
+			});
+		}
+	});
 });
 
 
-function getDefaultImg(req, res, msg){
-    var path = __dirname + "/images/e__who_icon.png"; // 
-    fs.access(path, function(err) {
-       if ( err ) {
-    	   console.log("getDefaultImg func error occurred");
-    	   res.send({error: true, message:'default img Not Found'});
-    	   return;
-       }
-       console.log("getDefaultImg: " + msg);
-       var is = fs.createReadStream(path);
-       is.pipe(res);
-    });
+function getDefaultImg(req, res, msg) {
+	var path = __dirname + "/images/e__who_icon.png"; // 
+	fs.access(path, function (err) {
+		if (err) {
+			console.log("getDefaultImg func error occurred");
+			res.send({ error: true, message: 'default img Not Found' });
+			return;
+		}
+		console.log("getDefaultImg: " + msg);
+		var is = fs.createReadStream(path);
+		is.pipe(res);
+	});
 }
 
-router.post('/updatePic/board/:boardId', multer({dest:'./uploads'}).single('photo'),function (req,res,next) {
+router.post('/updatePic/board/:boardId', multer({ dest: './uploads' }).single('photo'), function (req, res, next) {
 	console.log("req.file:", req.file);
 	console.log("req.body", req.body);
 	var boardId = req.params.boardId;
 	var reqDate = req.body.reqDate;
-	
+
 	var imgs = [];
-	if(boardId){
-		imgs.push("board_" + boardId);	
+	if (boardId) {
+		imgs.push("board_" + boardId);
 	} else {
 		return next(new Error('boardId undefined error'));
 	}
-    var thumbPath = __dirname + config.im.thumbPath + imgs[0];	//resize img target path
-    var width = config.im.board.width,
+	var thumbPath = __dirname + config.im.thumbPath + imgs[0];	//resize img target path
+	var width = config.im.board.width,
 		height = config.im.board.height;
-	im.resize({ 
-		srcPath: req.file.path, 
-//		srcData: fs.createReadStream(req.file.path),
-		dstPath: thumbPath, 
+	im.resize({
+		srcPath: req.file.path,
+		//		srcData: fs.createReadStream(req.file.path),
+		dstPath: thumbPath,
 		width: width,
-		height : height
-	}, function(err, stdout, stderr){
-		if(err){ return next(err);}
+		height: height
+	}, function (err, stdout, stderr) {
+		if (err) { return next(err); }
 		var s3 = new AWS.S3();
-	    var params = {
-	            Bucket:'schooler.board',
-	            Key: imgs[0],
-	            ACL:'public-read',
-	            Body: fs.createReadStream(thumbPath)
-	    };
-		s3.upload(params, function(err, data){
-			if(err){
-				return res.send({ error: true, message:'error occurred while s3 upload'});
+		var params = {
+			Bucket: 'schooler.board',
+			Key: imgs[0],
+			ACL: 'public-read',
+			Body: fs.createReadStream(thumbPath)
+		};
+		s3.upload(params, function (err, data) {
+			if (err) {
+				return res.send({ error: true, message: 'error occurred while s3 upload' });
 			} else {
 				console.log("data.Location:", data.Location);
 				console.log("imgs[0]", imgs[0]);
 				fs.unlink(req.file.path);	//uploads 폴더에 올라간 임시파일 삭제	
 				fs.unlink(thumbPath);	    //resize 한 임시파일 삭제
-				Board.update( {"boardId": boardId, "pic":{"$ne": imgs[0]} }, {"$push": {"pic": imgs[0]}}, function (err, doc) {
-					if(err){return next(err);}
-					res.send({ error: false, message: "boardId: "+ boardId, result: imgs[0] });	
+				Board.update({ "boardId": boardId, "pic": { "$ne": imgs[0] } }, { "$push": { "pic": imgs[0] } }, function (err, doc) {
+					if (err) { return next(err); }
+					res.send({ error: false, message: "boardId: " + boardId, result: imgs[0] });
 				});
-			}	    
-	    });	
+			}
+		});
 	});
-    
+
 });
 
-router.get('/getPic/board/:imgKey',function (req, res, next) {
-	if(!req.params.imgKey) { return res.send({error: true, message: 'board img args undefined error'}); }
+router.get('/getPic/board/:imgKey', function (req, res, next) {
+	if (!req.params.imgKey) { return res.send({ error: true, message: 'board img args undefined error' }); }
 	var imgKey = req.params.imgKey;
-    var s3 = new AWS.S3();
-    var params = {Bucket:'schooler.board', Key: imgKey};
-    s3.getObject(params).createReadStream().on('error', function(err){
-    	getDefaultImg(req, res, err.message);
-    }).pipe(res);
+	var s3 = new AWS.S3();
+	var params = { Bucket: 'schooler.board', Key: imgKey };
+	s3.getObject(params).createReadStream().on('error', function (err) {
+		getDefaultImg(req, res, err.message);
+	}).pipe(res);
 });
+
+function editUsersPicField(userId, field, reqDate, cb) {
+	User.find({ userId: parseInt(userId) }, function (err, docs) {
+		if (err) {
+			return cb(err);
+		}
+		if (docs && docs.length === 1) {
+			docs[0].pic.small = field;
+			docs[0].pic.large = field;
+			// var d = new Date(reqDate);
+			docs[0].updatedAt = new Date(reqDate);
+			docs[0].save().then(function fulfilled(result) {
+				cb(null, result.updatedAt);
+			}, function rejected(err) {
+				cb(new Error('doc_save_error'));
+			});
+		} else {
+			cb(new Error('docs_length_error'));
+		}
+	});
+}
 
 
 module.exports = router;

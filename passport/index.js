@@ -33,7 +33,11 @@ passport.use(new local({
 	usernameField: 'email',
 	passwordField: 'password',
 	passReqToCallback:true}, function(req, email, password, done){
-		User.findOne({email: email}, function(err, profile){
+		User.findOne({email: email}
+		// , {univ:1, job:1, desc:1, sns:1, pic:1, createdAt:1, updatedAt:1, location:1, temp:1, status:1, provider:1, username:1, pushId:1, email:1, userId:1, _id:1}
+		// 여기서 프로젝션을 해버리면 패스워드 검사를 못함, 아래에서 프로젝션된 것처럼 새로운 객체를 생성
+		, function(err, profile){
+			// console.log("findOne", profile);
 			if(profile)	{
 				passwordUtils.passwordCheck(password, profile.password, profile.salt, profile.work, function(err, isAuth){
 					if(isAuth) {
@@ -125,7 +129,7 @@ passport.use(new local({
 //}));
 
 passport.serializeUser(function(user, done){
-//	console.log("serial.. user", user);
+	// console.log("serial.. user", user);
 	//session에 저장되는 req.user에 패스워드랑 비번팩터 등의 정보를 빼기 위해 새로 유저를 넣음
 	var sUser = {
 			univ: user.univ,
@@ -150,8 +154,9 @@ passport.serializeUser(function(user, done){
 			userId: user.userId,
 			_id: user._id
 	};
-//	done(null, user);
+	// console.log("serial.. sUser", sUser);
 	done(null, sUser);
+	// done(null, user);
 });
 
 passport.deserializeUser(function(user, done) {
@@ -192,13 +197,12 @@ var routes = function routes(app){
 			 * This function is primarily used when users sign up, during which req.login() can be invoked to automatically log 
 			 * in the newly registered user.
 			*/			 
-			req.login(user, function(err) {
+			req.login(user, function(err) {	
 				if(err) { 
 					console.log('req.login() Error!');
 					return next(err); 
 				}
 //				console.log("req.login() user:", user);
-				
 				dbHandler.createUser(user.userId, user.username, user.email, user.univ[0].univId)
 				.then(function (datas) {
 					res.send( datas );

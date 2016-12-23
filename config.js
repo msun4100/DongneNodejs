@@ -39,7 +39,7 @@ var config = {
 		name: 'dongne',
 		port: 27017,
 		url: 'localhost',
-		poolSize: 1
+		poolSize: 5
 	},
 	mysql: {
 //		connectionLimit: 250,
@@ -85,6 +85,9 @@ var config = {
 	    small: { width: 120, height: 120},
 	    large: { width: 348, height: 348},
 	    board: { width: 1080, height: 1080}
+	},
+	geoNear: {
+		defaultMsg: 'somewhere'
 	}
 };
 

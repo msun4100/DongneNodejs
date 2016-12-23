@@ -61,15 +61,19 @@ function getStatus(req, res, next) {
 	query.exec(function (err, docs) {
 		if (err) {
 			err.code = 500;
-			next(err);
+			return next(err);
 		}
-		console.log("find status", docs);
+		// console.log("find status docs", docs);
+		// console.log("find status docs.length", docs.length);
 		if (docs.length === 1) {
-			res.send({ error: false, message: 'find status', result: docs[0] });
-			return;
-		} else {
-			res.send({ error: true, message: 'find status error' });
-			return;
+			res.send({ error: false, message: 'FIND_STATUS', result: docs[0] });
+		} else if (docs.length === 0) {
+			var obj = {
+				from: user.userId, to: userId, status: -1, actionUser: user.userId, updatedAt: new Date(), msg: ""
+			}
+			res.send({ error: false, message: 'STATUS_NOT_FOUND', result: obj });
+		} else { //0 or 1 이외의 length가 존재하면 안됨. 래빗큐로 에러로그 전송.
+			res.send({ error: true, message: 'STATUS_LENGTH_ERROR' });
 		}
 	});
 }
@@ -348,7 +352,7 @@ function postUnivUsers(req, res, next) {
 	var reqDate = req.body.reqDate;
 
 	var sort = req.body.sort;
-	if(sort === "3"){
+	if (sort === "3") {
 		require('../geoNear').locationsListByDistance(req, res);
 		return;
 	}
@@ -382,8 +386,12 @@ function postUnivUsers(req, res, next) {
 				.skip(start * display)
 				.limit(display).exec(function (err, users) {
 					//	        		console.timeEnd('TIMER-ne');
-					if (err) callback(err, null);
-					else callback(null, users);
+					if (err) { return callback(err, null); }
+					if (users.length === 0) {
+						callback(new Error('HAS_NO_MORE_ITEMS'), null);
+					} else {
+						callback(null, users);
+					}
 				});
 		},
 		function (users, callback) {
@@ -403,9 +411,7 @@ function postUnivUsers(req, res, next) {
 		function (users, callback) {
 			//find accepted friends and fetch isFriend
 			var query = Friend.find();
-			//	    		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: 1} ])
 			query.or([{ from: user.userId }, { to: user.userId }])
-			//	    		query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {status: {"$lt":3} } ])
 			query.select({ __v: 0, _id: 0 });
 			query.exec().then(function fulfilled(results) {
 				//	    			console.time('TIMER-ISFRIEND');
@@ -446,22 +452,30 @@ function postUnivUsers(req, res, next) {
 			});
 		}],
 		function (err, list) {
-			if (err) { res.send({ error: true, message: err.message }); }
-			else {
-				User.find({ userId: user.userId }, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 }, function (err, users) {
-					//						console.timeEnd('TIMER');
-					if (err) { res.send({ error: true, message: err.message }); }
-					else {
-						res.send({
-							error: false,
-							total: total,
-							message: 'univ all friends total:' + list.length,
-							result: list,
-							user: users[0]
-						});
-					}
-				});
-			} //else
+			var msg = '';
+			if (err) {
+				if (err.message === 'HAS_NO_MORE_ITEMS') {
+					msg = err.message;	//return은 하지 않고 메세지만 바꿈..
+					list = [];
+				} else {
+					return res.send({ error: true, message: err.message });
+				}
+			}
+			User.find({ userId: user.userId }, { _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 }, function (err, users) {
+				//						console.timeEnd('TIMER');
+				if (err) { res.send({ error: true, message: err.message }); }
+				else {
+					if (list.length > 0) msg = 'current list length: ' + list.length;
+					res.send({
+						error: false,
+						total: total,
+						message: msg,
+						result: list,
+						user: users[0]
+					});
+				}
+			});
+
 		});
 }
 
@@ -487,8 +501,8 @@ function postMyFriends(req, res, next) {
 			sortObj = { "username": 1 };
 			break;
 	}
-	console.log("SortObj", sortObj);
-	console.log("reqBody", req.body);
+	// console.log("SortObj", sortObj);
+	// console.log("reqBody", req.body);
 	var user = req.user;
 	var total = 0;
 	var target_user_id;
@@ -506,7 +520,7 @@ function postMyFriends(req, res, next) {
 		query.exec(function (err, count) {
 			if (err) callback(err, null);
 			if (count === 0) {
-				console.log("postMyFriends_count_zero");
+				// console.log(""+target_user_id+"'s postMyFriends_count_zero");
 				return callback(new Error('postMyFriends_count_zero'), null);
 			}
 			callback(null, count);
@@ -639,7 +653,7 @@ function postMyFriends(req, res, next) {
 			if (err) { return res.send({ error: true, message: err.message }); }
 			if (!mUser || mUser.length === 0) { return res.send({ error: true, message: 'target_user_find_error' }); }
 			if (users.length !== 0) {
-//				console.log("mUser", mUser);
+				//				console.log("mUser", mUser);
 				var locObj = { lat: mUser[0].location.coordinates[1], lon: mUser[0].location.coordinates[0] }
 				fetchDistance(locObj, users, function (err, list) {
 					if (err) { return next(err); }
@@ -755,8 +769,12 @@ function postSearchUnivUsers(req, res, next) {
 			if (req.body.deptname) {
 				query.where('univ.deptname').regex(new RegExp(req.body.deptname, 'i'));
 			}
-			if (req.body.job) {
-				query.or([{ "job.name": { "$regex": new RegExp(req.body.job, 'i') } }, { "job.team": { "$regex": new RegExp(req.body.job, 'i') } }]);
+			// if (req.body.job){query.or([{ "job.name": { "$regex": new RegExp(req.body.job, 'i') } }, { "job.team": { "$regex": new RegExp(req.body.job, 'i') } }]);}
+			if (req.body.jobname) {
+				query.where('job.name').regex(new RegExp(req.body.jobname, 'i'));
+			}
+			if (req.body.jobteam) {
+				query.where('job.team').regex(new RegExp(req.body.jobteam, 'i'));
 			}
 			query.select({ _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 });
 			query.sort(sortObj);
@@ -780,9 +798,15 @@ function postSearchUnivUsers(req, res, next) {
 			if (req.body.deptname) {
 				query.where('univ.deptname').regex(new RegExp(req.body.deptname, 'i'));
 			}
-			if (req.body.job) {
-				query.or([{ "job.name": { "$regex": new RegExp(req.body.job, 'i') } },
-				{ "job.team": { "$regex": new RegExp(req.body.job, 'i') } }]);
+			// if (req.body.job) {
+			// 	query.or([{ "job.name": { "$regex": new RegExp(req.body.job, 'i') } },
+			// 	{ "job.team": { "$regex": new RegExp(req.body.job, 'i') } }]);
+			// }
+			if (req.body.jobname) {
+				query.where('job.name').regex(new RegExp(req.body.jobname, 'i'));
+			}
+			if (req.body.jobteam) {
+				query.where('job.team').regex(new RegExp(req.body.jobteam, 'i'));
 			}
 			query.exec(function (err, count) {
 				if (err) callback(err, null);
@@ -885,7 +909,7 @@ function postSearchMyFriends(req, res, next) {
 	console.log("sortObj", sortObj);
 	console.log("/friends/univ/:univId/my/search", req.body);
 	var user = req.user;
-	
+
 	var total = 0;
 	async.waterfall([
 		function (callback) {
@@ -900,7 +924,7 @@ function postSearchMyFriends(req, res, next) {
 				// var status = [];
 				var i, j;
 				total = 0;
-				if(!results || results.length === 0){
+				if (!results || results.length === 0) {
 					console.log("postMyFriends_count_zero ", results.length);
 					return callback(new Error('MyFriendsSearch_count_zero'), null);
 				}
@@ -917,7 +941,7 @@ function postSearchMyFriends(req, res, next) {
 			}, function rejected(err) {
 				callback(err, null);
 			});
-		},function (ids, callback){
+		}, function (ids, callback) {
 			var query = User.find({ "userId": { $in: ids } });
 			if (req.body.username) {
 				query.where('username').regex(new RegExp(req.body.username, 'i'));
@@ -928,27 +952,33 @@ function postSearchMyFriends(req, res, next) {
 			if (req.body.deptname) {
 				query.where('univ.deptname').regex(new RegExp(req.body.deptname, 'i'));
 			}
-			if (req.body.job) {
-				query.or([{ "job.name": { "$regex": new RegExp(req.body.job, 'i') } }, { "job.team": { "$regex": new RegExp(req.body.job, 'i') } }]);
+			// if (req.body.job) {
+			// 	query.or([{ "job.name": { "$regex": new RegExp(req.body.job, 'i') } }, { "job.team": { "$regex": new RegExp(req.body.job, 'i') } }]);
+			// }
+			if (req.body.jobname) {
+				query.where('job.name').regex(new RegExp(req.body.jobname, 'i'));
+			}
+			if (req.body.jobteam) {
+				query.where('job.team').regex(new RegExp(req.body.jobteam, 'i'));
 			}
 			query.select({ _id: 0, password: 0, salt: 0, work: 0, __v: 0, "univ._id": 0 });
 			query.sort(sortObj);
 			query.skip(start * display);
 			query.limit(display);
 			query.exec(function (err, users) {
-					// var i=0;
-					// if(users && users.length > 0){ }
-					for(i=0; i<users.length; i++) {
-						users[i].status = 1;	//찾은 애들은 모두 status === 1
-					}
-					// console.log("find users", users);
-					callback(null, users);
-					// err 발생시킬 필요없이 빈 배열 리턴
-					// else {
-					// 	callback(new Error('MyFriendsSearch_count_zero_case 2'), null);
-					// }
-				});
-		},function (users, callback) {
+				// var i=0;
+				// if(users && users.length > 0){ }
+				for (i = 0; i < users.length; i++) {
+					users[i].status = 1;	//찾은 애들은 모두 status === 1
+				}
+				// console.log("find users", users);
+				callback(null, users);
+				// err 발생시킬 필요없이 빈 배열 리턴
+				// else {
+				// 	callback(new Error('MyFriendsSearch_count_zero_case 2'), null);
+				// }
+			});
+		}, function (users, callback) {
 			var locObj = { lat: user.location.coordinates[1], lon: user.location.coordinates[0] }
 			fetchDistance(locObj, users, function (err, list) {
 				if (err) callback(err, null);
@@ -1189,7 +1219,7 @@ function showFriends(req, res, next) {
 		case "3":
 			console.time('TIMER-status');	//실행시간 체크 스타트
 			var query = Friend.find();
-			query.and([ {$or:[{from: user.userId}, {to: user.userId}]}, {actionUser: user.userId}, {status: 3} ])
+			query.and([{ $or: [{ from: user.userId }, { to: user.userId }] }, { actionUser: user.userId }, { status: 3 }])
 			// query.and([{ from: user.userId }, { actionUser: user.userId }, { status: 3 }])
 			query.select({ __v: 0, _id: 0 });
 			query.sort({ updatedAt: -1 });
@@ -1401,17 +1431,17 @@ function showFriendsList(req, res, next) {	//수정전. friends collection들의
 
 function fetchDistance(refPoint, users, cb) {
 
-	var defaultValue = "somewhere";
+	var defaultValue = config.geoNear.defaultMsg;
 	var list = [];
 	var i, sum = 0;
-	if (refPoint.lat === undefined || refPoint.lon === undefined || refPoint.lat === 99999 || refPoint.lon === 99999 || refPoint.lat === "" || refPoint.lon === "") {
+	if (refPoint.lat === 0 || refPoint.lon === 0 || refPoint.lat === undefined || refPoint.lon === undefined) {
 		for (i = 0; i < users.length; i++) {
 			users[i].temp = defaultValue;
 			list.push(users[i]);
 		}
 	} else {
 		for (i = 0; i < users.length; i++) {
-			if (users[i].location.coordinates[1] === undefined || users[i].location.coordinates[0] === undefined || users[i].location.coordinates[1] === 0 || users[i].location.coordinates[0] === 0) {
+			if (users[i].location.coordinates[1] === 0 || users[i].location.coordinates[0] === 0 || users[i].location.coordinates[1] === undefined || users[i].location.coordinates[0] === undefined) {
 				users[i].temp = defaultValue;
 			} else {
 				//0인덱스가 lng

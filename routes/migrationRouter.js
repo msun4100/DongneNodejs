@@ -255,19 +255,37 @@ router.post('/chat_rooms/:id', function (req, res, next) {
 	*/
 	var chat_room_id = req.params.id;
 	var joined_at = req.body.joined_at;
-	if(!joined_at || !chat_room_id){
-		return res.send({error: true, message: 'timeStamp undefined error'});
-	}
+	var start = parseInt(req.body.start);
+	var display = parseInt(req.body.display);
 	
-	dbHandler.getChatRoomMsgByTime(chat_room_id, joined_at)
-		.then(function (datas) {
-			res.send(datas);
-		}, function (error) {
-			res.send({
-				error: true,
-				message: "Failed to getChatRoomMsgByTime Messages"
+	if (!joined_at || !chat_room_id) {
+		return res.send({ error: true, message: 'timeStamp undefined error' });
+	}
+	console.log("chat_room/"+chat_room_id, req.body);
+	console.log("chat_room/"+chat_room_id, ""+chat_room_id);
+	if (start && display) {
+		console.log("1111111111")
+		dbHandler.getChatRoomMsgByTimeV2(chat_room_id, joined_at, start, display)
+			.then(function (datas) {
+				res.send(datas);
+			}, function (error) {
+				res.send({
+					error: true,
+					message: "Failed to getChatRoomMsgByTimeV2 Messages"
+				});
 			});
-		});
+	} else {
+		console.log("2222222222222")
+		dbHandler.getChatRoomMsgByTime(chat_room_id, joined_at)
+			.then(function (datas) {
+				res.send(datas);
+			}, function (error) {
+				res.send({
+					error: true,
+					message: "Failed to getChatRoomMsgByTime Messages"
+				});
+			});
+	}
 });
 
 router.post('/chat_rooms/:id/message', function (req, res, next) {
@@ -402,7 +420,7 @@ router.post('/users/:id/message', function (req, res, next) {
 
 	var reqDate = req.body.reqDate;
 	if (reqDate === undefined) {
-		reqDate = TimeStamp.getCurrentTimeStamp(); 
+		reqDate = TimeStamp.getCurrentTimeStamp();
 	}
 	//기존에 없던 message_id와 chat_room_id 바디변수를 추가했으므로 
 	//	기존 코드에 대한 요청이 정상작동하도록 undefined에 대한 처리를 해줌

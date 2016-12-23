@@ -112,6 +112,7 @@ function editPassword(req, res, next) {
 
 
 function editUser(req, res, next) {
+	var reqDate = req.body.reqDate;
 	var email = req.body.email;
 	var deptname = req.body.deptname;
 	if (!email || !deptname) {
@@ -130,8 +131,6 @@ function editUser(req, res, next) {
 	if (jobname && jobname.length === 0) {
 		console.log("equals", "0");
 	}
-
-
 	User.findByEmail(email, function (err, doc) {
 		if (err) {
 			err.code = 500;
@@ -167,7 +166,14 @@ function editUser(req, res, next) {
 			var info2 = { url: insta, sns: "insta" };
 			doc.sns.push(info2);
 		}
-		doc.updatedAt = Date.now();
+		if(reqDate){
+			var d = new Date(reqDate);
+			// console.log("dddd", d);
+			doc.updatedAt = d;
+		} else {
+			doc.updatedAt = Date.now();
+		}
+		
 		doc.save().then(function fulfilled(result) {
 			res.send({
 				error: false,
@@ -184,9 +190,9 @@ function editUser(req, res, next) {
 }
 function emailCheck(req, res, next) {
 	var email = req.body.email;
-	User.find({ "email": email }, { _id: 1, userId: 1, email: 1 }).then(function fulfilled(docs) {
+	User.find({ "email": email }, { _id: 1, userId: 1, email: 1, createdAt:1, provider: 1 }).then(function fulfilled(docs) {
 		if (docs.length > 0) {
-			res.send({ error: false, message: 'DUP_EMAIL' });
+			res.send({ error: false, message: 'DUP_EMAIL', result: {userId: docs[0].userId, email:docs[0].email, created_at: docs[0].createdAt, provider: docs[0].provider} });
 		} else {
 			res.send({ error: false, message: 'AVAILABLE_EMAIL' });
 		}
@@ -197,7 +203,7 @@ function emailCheck(req, res, next) {
 
 function fetchDistance(refPoint, users, cb) {
 
-	var defaultValue = "somewhere";
+	var defaultValue = config.geoNear.defaultMsg;
 	var list = [];
 	var i, sum = 0;
 	if (refPoint.lat === undefined || refPoint.lon === undefined || refPoint.lat === 99999 || refPoint.lon === 99999 || refPoint.lat === "" || refPoint.lon === "") {

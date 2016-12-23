@@ -21,9 +21,9 @@ var UserSchema = Schema({
 	desc: [ String ],
 	sns: [ { sns:{type: String, default: ""}, url: {type: String, default: ""} } ],
 	pic: {
-		small:{type: String, default: ""},
+		small:{type: String, default: "0"},
 //		medium:{type: String, default: ""},
-		large:{type: String, default: ""},
+		large:{type: String, default: "0"},
 	},
 	createdAt: { type: Date, default: Date.now },
 	updatedAt: { type: Date, default: Date.now },
@@ -117,7 +117,8 @@ UserSchema.methods.addUniv = function(univ) {
 	return this.save(); //promise객체로 리턴 됨
 };
 //static 은 User.xxx로 호출 method는  user = new User({}) --> user.xx 인스턴스로 호출
-UserSchema.index({ "univ.univId": 1, "univ.deptId": 1 }); 
+UserSchema.index({ "univ.univId": 1, "univ.deptId": 1 });
+UserSchema.index({ "location": "2dsphere" }); 
 
 UserSchema.plugin(autoIncrement.plugin, { model: 'User', field: 'userId', startAt: 1, incrementBy: 1});
 var User = mongoose.model('User', UserSchema);
