@@ -52,7 +52,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 	dist = Math.acos(dist);
 	dist = dist * 180/Math.PI;
 	dist = dist * 60 * 1.1515 * 1.609344;	//km로 환산
-	console.log("Before Conversion:", dist);
+	// console.log("Before Conversion:", dist);
 	var distance= dist;
 	if(dist < 1.0000000000000000){	//자릿수 맞춤
 		distance *= 1000;

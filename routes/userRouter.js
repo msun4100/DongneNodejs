@@ -224,4 +224,25 @@ function fetchDistance(refPoint, users, cb) {
 	return cb(null, list);
 }
 
+var pool = require('../db_models/dbConfig');
+router.get('/users/test', function(req,res){
+	pool.getConnection(function (err, conn) {
+			if (err) {
+				console.log("1", err); 
+				res.send(err); 
+			}
+			var sql = 'SELECT user_id, name, email, gcm_registration_id, created_at FROM users WHERE user_id = ?';
+			var input = ""+7;
+			conn.query(sql, input, function (err, results) {
+				if (err) {
+					conn.release();
+					console.log("2", err);
+					return res.send(err);
+				}
+				res.send(results);
+				
+			});
+		});
+});
+
 module.exports = router;

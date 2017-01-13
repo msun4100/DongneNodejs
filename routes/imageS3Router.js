@@ -40,7 +40,7 @@ router.post('/updatePic/user/:userId', multer({ dest: './uploads' }).single('pho
 
 	var s3 = new AWS.S3();
 	var params = {
-		Bucket: 'schooler.image',
+		Bucket: config.s3.bucket.profile,
 		Key: largeImgName,
 		ACL: 'public-read',
 		Body: fs.createReadStream(req.file.path)
@@ -96,7 +96,10 @@ router.get('/getPic/user/:userId/:size', function (req, res, next) {
 	}
 	var s3 = new AWS.S3();
 	//    var file = require('fs').createWriteStream('Avata.jpg');
-	var params = { Bucket: 'schooler.image', Key: key };
+	var params = { 
+		Bucket: config.s3.bucket.profile, 
+		Key: key 
+	};
 	s3.getObject(params).createReadStream().on('error', function (err) {
 		getDefaultImg(req, res, err.message);
 	}).pipe(res);
@@ -127,7 +130,7 @@ router.delete('/deletePic/user/:userId', function (req, res, next) {
 		//	        Key: 'copy/'+file.filename
 		//	    };      
 		var deleteParam = {
-			Bucket: 'schooler.image',
+			Bucket: config.bucket.profile,
 			Key: file.filename
 		};
 		//	    s3.copyObject(copyParams, function(err, data) {
@@ -208,7 +211,7 @@ router.post('/updatePic/board/:boardId', multer({ dest: './uploads' }).single('p
 		if (err) { return next(err); }
 		var s3 = new AWS.S3();
 		var params = {
-			Bucket: 'schooler.board',
+			Bucket: config.s3.bucket.board,//'schooler.image.board'
 			Key: imgs[0],
 			ACL: 'public-read',
 			Body: fs.createReadStream(thumbPath)
@@ -235,7 +238,10 @@ router.get('/getPic/board/:imgKey', function (req, res, next) {
 	if (!req.params.imgKey) { return res.send({ error: true, message: 'board img args undefined error' }); }
 	var imgKey = req.params.imgKey;
 	var s3 = new AWS.S3();
-	var params = { Bucket: 'schooler.board', Key: imgKey };
+	var params = { 
+		Bucket: config.s3.bucket.board, 
+		Key: imgKey 
+	};
 	s3.getObject(params).createReadStream().on('error', function (err) {
 		getDefaultImg(req, res, err.message);
 	}).pipe(res);

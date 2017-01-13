@@ -88,6 +88,12 @@ var config = {
 	},
 	geoNear: {
 		defaultMsg: 'somewhere'
+	},
+	s3: {
+		bucket:{
+			profile: "schooler.image.profile",
+			board: "schooler.image.board",
+		}
 	}
 };
 

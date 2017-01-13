@@ -653,8 +653,8 @@ function postMyFriends(req, res, next) {
 			if (err) { return res.send({ error: true, message: err.message }); }
 			if (!mUser || mUser.length === 0) { return res.send({ error: true, message: 'target_user_find_error' }); }
 			if (users.length !== 0) {
-				//				console.log("mUser", mUser);
-				var locObj = { lat: mUser[0].location.coordinates[1], lon: mUser[0].location.coordinates[0] }
+				var locObj = { lat: user.location.coordinates[1], lon: user.location.coordinates[0] };
+				// var locObj = { lat: mUser[0].location.coordinates[1], lon: mUser[0].location.coordinates[0] };
 				fetchDistance(locObj, users, function (err, list) {
 					if (err) { return next(err); }
 					console.timeEnd('postMyFriends');
